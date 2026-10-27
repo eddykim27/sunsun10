@@ -435,7 +435,8 @@ function evaluate_(g, ctx) {
   var planned = sumIntervals_(intervals);
   var S = intervals.length ? intervals[0][0] : null;
   var E = intervals.length ? intervals[intervals.length - 1][1] : null;
-  var prep = st.type === '직원' ? ctx.settings.prepStaff : ctx.settings.prepPart;
+  // 같은 날 다른 지점 근무를 마치고 넘어오는 근무는 준비시간 없이 근무 시작시각이 출근 기준
+  var prep = g.moved ? 0 : st.type === '직원' ? ctx.settings.prepStaff : ctx.settings.prepPart;
   var deadline = S == null ? null : S - prep + ctx.settings.grace;
 
   var tin = g.att ? toMin_(g.att['in']) : null;
@@ -559,6 +560,15 @@ function computeRange_(from, to, data) {
     var k = key(a.date, a.store, a.name);
     if (!groups[k]) { groups[k] = { date: a.date, store: a.store, name: a.name, shifts: [], att: null }; order.push(k); }
     groups[k].att = a;
+  });
+  // 같은 날 다른 지점에서 먼저 근무하고 이동해 오는 근무 표시
+  order.forEach(function (k) {
+    var g = groups[k];
+    if (!g.shifts.length) return;
+    var start = Math.min.apply(null, g.shifts.map(function (s) { return toMin_(s.start); }));
+    g.moved = sched.some(function (s) {
+      return s.date === g.date && s.name === g.name && s.store !== g.store && toMin_(s.end) != null && toMin_(s.end) <= start;
+    });
   });
   var nowStr = Utilities.formatDate(new Date(), TZ, 'HH:mm');
   var noBreak = {};
