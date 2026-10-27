@@ -1,0 +1,11 @@
+# sunsun10.netlify.app 주소는 그대로 두고, 화면은 GitHub Pages 최신 버전을 대신 보여줌 (200 = 프록시)
+/1         https://eddykim27.github.io/sunsun10/1/          200!
+/1/        https://eddykim27.github.io/sunsun10/1/          200!
+/2         https://eddykim27.github.io/sunsun10/2/          200!
+/2/        https://eddykim27.github.io/sunsun10/2/          200!
+/admin     https://eddykim27.github.io/sunsun10/admin/      200!
+/admin/    https://eddykim27.github.io/sunsun10/admin/      200!
+/board     https://eddykim27.github.io/sunsun10/board/      200!
+/board/    https://eddykim27.github.io/sunsun10/board/      200!
+/          https://eddykim27.github.io/sunsun10/            200!
+/*         https://eddykim27.github.io/sunsun10/:splat      200!
