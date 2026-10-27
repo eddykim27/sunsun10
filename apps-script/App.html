@@ -65,8 +65,8 @@
   .cell.out { background: #FAF8F3; }
   .cell.out > * { opacity: .45; }
   .cell.today { box-shadow: inset 0 0 0 3px var(--orange); }
-  .cell.thu { background: #F8ECF1; }
-  .cell.fri, .cell.sat { background: #FBF4DA; }
+  .cell.thu { background: #FFF7CC; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cell.thu.out { background: #FFFBE6; }
   .cell.editable { cursor: pointer; }
   .cell.editable:hover { box-shadow: inset 0 0 0 2px var(--green); }
   .cell-top { display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; font-weight: 900; }
@@ -502,6 +502,7 @@
   function cellClass(d, inMonth) {
     var w = dow(d), c = 'cell';
     if (!inMonth) c += ' out';
+    if (w === 4) c += ' thu';
     if (d === S.data.today) c += ' today';
     if (MODE === 'admin') c += ' editable';
     if (MODE === 'admin' && S.drafts[d]) c += ' dirty';

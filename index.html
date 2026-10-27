@@ -180,10 +180,12 @@
   .c.blank { background: transparent; border-color: transparent; }
   .c.off { background: transparent; border-style: dashed; }
   .c.today { box-shadow: 0 0 0 2px var(--orange); }
+  .c.thu { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .c.k-ok { background: color-mix(in srgb, var(--ok-bg) 70%, #fff); border-color: transparent; }
   .c.k-bad { background: color-mix(in srgb, var(--late-bg) 75%, #fff); border-color: transparent; }
   .c.k-warn { background: color-mix(in srgb, var(--warn-bg) 75%, #fff); border-color: transparent; }
   .c.k-info { background: color-mix(in srgb, var(--info-bg) 70%, #fff); border-color: transparent; }
+  .c.thu, .c.thu.off { background: #FFF7CC; border-color: #F1E3A0; }
   .c .dn { font-family: var(--f-num); font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
   .c .dn.sun { color: var(--sun); } .c .dn.sat { color: var(--sat); }
   .c .ent { display: flex; flex-direction: column; gap: 2px; }
@@ -390,7 +392,7 @@
       var ents = d.work.filter(function (x) { return x.date === date && x.name === n; });
       var ks = ents.map(function (x) { return kind(x.status); });
       var k = ks.indexOf('bad') >= 0 ? 'bad' : ks.indexOf('warn') >= 0 ? 'warn' : ks.indexOf('info') >= 0 ? 'info' : ks.indexOf('ok') >= 0 ? 'ok' : '';
-      var cls = 'c' + (!ents.length ? ' off' : '') + (k ? ' k-' + k : '') + (date === d.today ? ' today' : '');
+      var cls = 'c' + (!ents.length ? ' off' : '') + (k ? ' k-' + k : '') + (date === d.today ? ' today' : '') + (w === 4 ? ' thu' : '');
       h += '<div class="' + cls + '"><div class="dn ' + (w === 0 ? 'sun' : w === 6 ? 'sat' : '') + '">' + day + '</div>';
       if (!ents.length) h += '<div class="offtxt">휴무</div>';
       ents.forEach(function (x) {
