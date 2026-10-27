@@ -6,7 +6,7 @@ var SITE_BASE = (function () {
   var src = (document.currentScript && document.currentScript.src) || location.href;
   return src.replace(/[^\/]*$/, '').replace(/\/$/, '');
 })();
-window.QR_BASE = SITE_BASE;                   // 관리자 페이지의 QR 주소 → 기본주소/1, /2
+window.QR_BASE = 'https://sunsun10.netlify.app';   // 매장에 붙어 있는 QR 주소 (GitHub Pages로 자동 이동)
 window.STAFF_URL = SITE_BASE + '/board/';
 
 (function () {
