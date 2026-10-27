@@ -1,8 +1,13 @@
 /* 선선 출퇴근 — Netlify 화면과 구글 스크립트(데이터)를 연결하는 파일
  * 구글 스크립트를 새로 배포해서 주소가 바뀌면 아래 API_URL 한 줄만 바꾸면 돼요. */
 var API_URL = 'https://script.google.com/macros/s/AKfycbyTwR4H9eUiz0O0y8p7p35Piy2tx2GOk79lZItMVZGjgC5hb19cDLE-WEg_FGdpZlJZ8w/exec';
-window.QR_BASE = location.origin;            // 관리자 페이지의 QR 주소 → https://사이트/1, /2
-window.STAFF_URL = location.origin + '/board';
+// 사이트 기본 주소 (api.js 위치 기준) → 예: https://eddykim27.github.io/sunsun10
+var SITE_BASE = (function () {
+  var src = (document.currentScript && document.currentScript.src) || location.href;
+  return src.replace(/[^\/]*$/, '').replace(/\/$/, '');
+})();
+window.QR_BASE = SITE_BASE;                   // 관리자 페이지의 QR 주소 → 기본주소/1, /2
+window.STAFF_URL = SITE_BASE + '/board/';
 
 (function () {
   function call(fn, args) {

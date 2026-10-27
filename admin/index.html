@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<script src="/api.js"></script>
+<script src="../api.js"></script>
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -284,7 +284,7 @@
   var APP_URL = "https://script.google.com/macros/s/AKfycbyTwR4H9eUiz0O0y8p7p35Piy2tx2GOk79lZItMVZGjgC5hb19cDLE-WEg_FGdpZlJZ8w/exec";
   var PIN_KEY = 'sunsun-admin-pin';
   // QR 주소 (Netlify 화면에서는 window.QR_BASE 로 바뀜)
-  function qrUrl(i) { return window.QR_BASE ? window.QR_BASE + '/' + (i + 1) : APP_URL + '?s=' + (i + 1); }
+  function qrUrl(i) { return window.QR_BASE ? window.QR_BASE + '/' + (i + 1) + '/' : APP_URL + '?s=' + (i + 1); }
   var STAFF_URL = window.STAFF_URL || (APP_URL + '?v=board');
   var PALETTE = ['#2F55D4', '#8A2BE2', '#D41FB0', '#E8930C', '#1B1B1B', '#0E8F82', '#C0392B', '#5D7C1E', '#7A4E2D', '#3A7BD5', '#9C27B0', '#00897B'];
   var PART_ORDER = ['오픈', '미들', '마감', '근무'];
