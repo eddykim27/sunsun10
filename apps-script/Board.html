@@ -333,7 +333,7 @@
       ents.forEach(function (x) {
         h += '<div class="ent"><span class="where">' + esc(x.store) + (x.parts ? ' ' + esc(x.parts) : '') + (x.planned ? ' ' + x.start + '–' + x.end : '') + '</span>' +
           (x.tin || x.tout ? '<span class="tm"><span><i>출</i>' + (x.tin || '--:--') + '</span><span><i>퇴</i>' + (x.tout || '--:--') + '</span></span>' : '') +
-          pill(x.status, x.late ? x.status.replace('지각', '지각 ' + x.late + '분').replace(/·/g, ' ') : '') + '</div>';
+          pill(x.status, x.late ? x.status.replace('지각', '지각 ' + x.late + '분') : '') + '</div>';
       });
       h += '</div>';
     }

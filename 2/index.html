@@ -358,7 +358,7 @@
       var msg = '';
       if (w && w.planned > 0) {
         msg += '<p>' + esc(w.parts) + ' ' + w.start + '–' + w.end + '</p>';
-        msg += '<p><span class="pill ' + stClass(w.status) + '">' + esc(w.late > 0 ? w.status.replace('지각', '지각 ' + w.late + '분').replace(/·/g, ' ') : w.status) + '</span></p>';
+        msg += '<p><span class="pill ' + stClass(w.status) + '">' + esc(w.late > 0 ? w.status.replace('지각', '지각 ' + w.late + '분') : w.status) + '</span></p>';
         if (!isIn && w.actual != null) msg += '<p>오늘 근무 ' + hm(w.actual) + ' (예정 ' + hm(w.planned) + ')</p>';
       } else {
         msg += '<p>오늘 ' + esc(r.store) + ' 스케줄이 없어서 <b>스케줄외</b>로 기록됐어요.</p>';
