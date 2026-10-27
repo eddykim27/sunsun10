@@ -402,7 +402,7 @@
       });
       h += '</div>';
     }
-    h += '</div></div><div class="legend">' + ['정상', '지각', '결근', '조퇴', '퇴근누락', '근무중', '스케줄외', '예정'].map(pill).join('') + '</div>' +
+    h += '</div></div><div class="legend">' + ['정상', '지각', '결근', '조퇴', '퇴근누락', '근무중', '스케줄외', '예정'].map(function (x) { return pill(x); }).join('') + '</div>' +
       '<div class="hint">출근 기준은 근무 시작 ' + d.prep.staff + '분 전(직원) / ' + d.prep.part + '분 전(알바)이에요. 기록이 잘못됐으면 관리자에게 말해주세요.</div></div>';
     $('calendar').innerHTML = h;
   }
