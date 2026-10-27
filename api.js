@@ -7,7 +7,7 @@ var SITE_BASE = (function () {
   return src.replace(/[^\/]*$/, '').replace(/\/$/, '');
 })();
 window.QR_BASE = 'https://sunsun10.netlify.app';   // 매장에 붙어 있는 QR 주소 (GitHub Pages로 자동 이동)
-window.STAFF_URL = SITE_BASE + '/board/';
+window.STAFF_URL = 'https://sunsun10.netlify.app/board/';   // 공유용 대시보드 주소
 
 (function () {
   function call(fn, args) {
