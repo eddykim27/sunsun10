@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>선선 출퇴근 대시보드</title>
+<?!= include('Style') ?>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<style>
+  /* 글씨체: 본문 Pretendard, 제목·이름 주아체 */
+  :root { --f-body: 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif; --f-jua: 'Jua', 'Pretendard Variable', sans-serif; }
+  body { font-family: var(--f-body); letter-spacing: -0.01em; }
+  .hero h1, .sec-title, .store-card h3, .m-name, .cal-who h2, .t-row b, .p-btn, .tab, .m-btn, .avatar, .c .dn { font-family: var(--f-jua) !important; font-weight: 400 !important; letter-spacing: 0; }
+  .hero h1 { font-size: clamp(25px, 4.4vw, 34px); }
+  .sec-title { font-size: 21px; }
+  .store-card h3 { font-size: 18px; }
+  .m-name { font-size: 18px; }
+  .cal-who h2 { font-size: 24px; }
+  .t-row b { font-size: 16px; }
+  .tab, .m-btn, .p-btn { font-size: 15px; }
+
+  /* 직원용 출퇴근 현황판: 초록 헤더 → 달 선택 + 탭 → (전체 요약: 오늘 현황 + 사람 카드) / (개인 달력) */
+  body { padding: calc(14px + env(safe-area-inset-top, 0px)) 0 calc(40px + env(safe-area-inset-bottom, 0px)); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+
+  .hero { position: relative; overflow: hidden; border-radius: 26px; background: var(--green); color: #fff; padding: 20px 22px;
+    display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; box-shadow: 0 14px 34px rgba(30,154,76,.28); }
+  .hero::after { content: ""; position: absolute; width: 260px; height: 260px; right: -70px; top: -130px; border-radius: 50%; background: radial-gradient(circle, rgba(240,122,34,.55), transparent 65%); pointer-events: none; }
+  .hero-main { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; min-width: 0; }
+  .hero .logo-box { width: 64px; height: 64px; background: rgba(255,255,255,.12); flex: none; }
+  .hero .logo { font-size: 15px; }
+  .hero h1 { font-size: clamp(22px, 4vw, 30px); font-weight: 900; line-height: 1.15; }
+  .hero-sub { font-size: 13px; opacity: .85; margin-top: 2px; }
+  .sync { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; font-size: 13px; background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.22); padding: 6px 6px 6px 14px; border-radius: 999px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #B9F3CF; }
+  .sync-dot.busy { background: #FFD08A; }
+  .sync button { width: 30px; height: 30px; border-radius: 50%; border: none; background: #fff; color: var(--green-2); font-size: 15px; display: grid; place-items: center; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .months { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 2px 8px; margin: -4px -2px -8px; flex: 1 1 260px; min-width: 0; }
+  .months::-webkit-scrollbar { display: none; }
+  .m-btn { flex: none; border: 1px solid var(--line); background: var(--paper); padding: 8px 15px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-2); box-shadow: var(--shadow); }
+  .m-btn.on { background: var(--orange); border-color: var(--orange); color: #fff; }
+  .tabs { display: inline-flex; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+  .tab { border: none; background: none; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+  .tab.on { background: var(--green); color: #fff; }
+
+  #summary, #calendar { display: flex; flex-direction: column; gap: 14px; }
+  #summary[hidden], #calendar[hidden] { display: none; }
+  .sec-title { font-family: var(--f-round); font-size: 19px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .sec-title small { font-family: var(--f-body); font-size: 12px; color: var(--ink-3); }
+
+  /* 오늘 현황 */
+  .today-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+  .store-card { background: var(--paper); border-radius: var(--r-lg); padding: 16px 18px; box-shadow: var(--shadow); }
+  .store-card h3 { font-size: 16px; font-weight: 900; color: var(--green-deep); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .store-card.off h3 { color: #8B1D1D; }   /* 오늘 근무자가 없으면 지점명도 휴무 색 */
+  .store-card h3 small { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+  .t-row { display: grid; grid-template-columns: 58px 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .t-row:first-of-type { border-top: none; }
+  .t-row b { font-size: 15px; }
+  .t-row .when { color: var(--ink-2); }
+  .t-row .when small { display: block; color: var(--ink-3); font-size: 11px; }
+  .empty { color: var(--ink-3); font-size: 14px; padding: 6px 0; }
+
+  /* 요약 타일 + 사람 카드 */
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tile { background: var(--paper); border-radius: var(--r-lg); padding: 14px 16px; box-shadow: var(--shadow); }
+  .tile small { font-size: 12px; color: var(--ink-3); display: block; }
+  .tile b { font-family: var(--f-num); font-size: 26px; }
+  .tile b span { font-family: var(--f-body); font-size: 13px; color: var(--ink-2); font-weight: 500; margin-left: 2px; }
+  .tile.bad b { color: var(--late); }
+  .members { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .m-card { position: relative; background: var(--paper); border: 1px solid transparent; border-radius: var(--r-lg); padding: 16px; box-shadow: var(--shadow); text-align: left;
+    display: flex; flex-direction: column; gap: 12px; transition: transform .2s, box-shadow .2s; }
+  .m-card:hover { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(29,42,34,.06), 0 14px 30px rgba(29,42,34,.1); }
+  .m-card.warn::after { content: ""; position: absolute; top: 16px; right: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--late); }
+  .m-head { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-weight: 900; font-size: 17px; color: #fff; flex: none; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
+  .m-name { font-weight: 900; font-size: 16px; }
+  .m-sub { font-size: 12px; color: var(--ink-3); }
+  .m-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .stat { background: var(--cream); border-radius: var(--r-sm); padding: 8px 9px; min-width: 0; }
+  .stat small { font-size: 11px; color: var(--ink-3); display: block; white-space: nowrap; }
+  .stat b { font-family: var(--f-num); font-size: 18px; white-space: nowrap; }
+  .stat b span { font-family: var(--f-body); font-size: 11px; color: var(--ink-3); font-weight: 500; }
+  .stat.bad { background: var(--late-bg); } .stat.bad small, .stat.bad b { color: var(--late); }
+  .m-foot { font-size: 12px; color: var(--ink-2); display: flex; justify-content: space-between; }
+
+  /* 개인 달력 */
+  .people { display: flex; gap: 6px; flex-wrap: wrap; }
+  .p-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--paper); padding: 4px 13px 4px 4px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-2); box-shadow: var(--shadow); }
+  .p-btn .avatar { width: 28px; height: 28px; border-radius: 10px; font-size: 13px; }
+  .p-btn.on { background: var(--ink); color: #fff; border-color: transparent; }
+  .cal-card { background: var(--paper); border-radius: 26px; padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; }
+  .cal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cal-who { display: flex; align-items: center; gap: 12px; }
+  .cal-who .avatar { width: 50px; height: 50px; border-radius: 16px; font-size: 21px; }
+  .cal-who h2 { font-size: 21px; font-weight: 900; line-height: 1.2; }
+  .cal-who p { font-size: 13px; color: var(--ink-3); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .chip { padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--green-soft); color: var(--green-2); }
+  .chip.bad { background: var(--late-bg); color: var(--late); }
+  .chip .num { font-weight: 700; }
+  .print-btn { border: 1px solid var(--line); background: var(--cream); padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .cal-scroll { overflow-x: auto; }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(92px, 1fr)); gap: 6px; min-width: 680px; }
+  .dh { text-align: center; font-size: 12px; font-weight: 900; color: var(--ink-3); }
+  .dh.sun { color: var(--sun); } .dh.sat { color: var(--sat); }
+  .c { min-height: 108px; border-radius: 14px; padding: 7px 8px; background: var(--cream); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; font-size: 12px; min-width: 0; }
+  .c.blank { background: transparent; border-color: transparent; }
+  .c.off { background: transparent; border-style: dashed; }
+  .c.today { box-shadow: 0 0 0 2px var(--orange); }
+  .c.k-ok { background: color-mix(in srgb, var(--ok-bg) 70%, #fff); border-color: transparent; }
+  .c.k-bad { background: color-mix(in srgb, var(--late-bg) 75%, #fff); border-color: transparent; }
+  .c.k-warn { background: color-mix(in srgb, var(--warn-bg) 75%, #fff); border-color: transparent; }
+  .c.k-info { background: color-mix(in srgb, var(--info-bg) 70%, #fff); border-color: transparent; }
+  .c .dn { font-family: var(--f-num); font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .c .dn.sun { color: var(--sun); } .c .dn.sat { color: var(--sat); }
+  .c .ent { display: flex; flex-direction: column; gap: 2px; }
+  .c .ent + .ent { border-top: 1px dashed rgba(0,0,0,.1); padding-top: 4px; }
+  .c .where { font-weight: 700; color: var(--ink-2); font-size: 11px; }
+  .c .tm { font-family: var(--f-num); font-size: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .c .tm i { font-style: normal; color: var(--ink-3); font-size: 10px; margin-right: 2px; }
+  .c .pill { font-size: 11px; padding: 2px 8px; align-self: flex-start; }
+  .c .offtxt { color: var(--ink-3); font-size: 12px; margin-top: auto; }
+  .legend { display: flex; gap: 6px; flex-wrap: wrap; }
+  .hint { font-size: 12px; color: var(--ink-3); }
+  .placeholder { background: var(--paper); border-radius: var(--r-lg); padding: 32px; text-align: center; color: var(--ink-3); box-shadow: var(--shadow); }
+  .err { background: var(--late-bg); color: var(--late); border-radius: var(--r-md); padding: 14px; font-size: 14px; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 6mm; }
+    html, body { background: #fff !important; padding: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  body.printing { background: #fff; padding: 0; }
+  body.printing .hero, body.printing .toolbar, body.printing .people, body.printing .print-btn, body.printing .hint, body.printing #summary, body.printing .toast { display: none !important; }
+  body.printing .wrap { max-width: none; width: 1060px; padding: 0; margin: 0; }
+  body.printing .cal-card { box-shadow: none; padding: 0; }
+  body.printing .grid { min-width: 0; }
+  body.printing .c.today { box-shadow: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-main">
+      <div class="logo-box" id="logo"><div class="logo"><span>SUN</span><span>SUN</span><span>COFFEE</span></div></div>
+      <div><h1>선선 출퇴근 대시보드</h1><div class="hero-sub" id="hero-sub">기록을 불러오는 중이에요</div></div>
+    </div>
+    <div class="sync"><span class="sync-dot busy" id="sync-dot"></span><span id="sync-text">불러오는 중…</span><button onclick="load(S.ym, true)" aria-label="새로고침">↻</button></div>
+  </header>
+
+  <div class="toolbar">
+    <div class="months" id="months"></div>
+    <div class="tabs">
+      <button class="tab on" id="tab-summary" onclick="setTab('summary')">전체 요약</button>
+      <button class="tab" id="tab-calendar" onclick="setTab('calendar')">개인 달력</button>
+    </div>
+  </div>
+
+  <section id="summary"><div class="placeholder">구글 시트에서 기록을 불러오는 중이에요.</div></section>
+  <section id="calendar" hidden></section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  var S = { data: null, ym: null, tab: 'summary', person: null, loading: false };
+  var PALETTE = ['#2F55D4', '#8A2BE2', '#D41FB0', '#E8930C', '#1B1B1B', '#0E8F82', '#C0392B', '#5D7C1E', '#7A4E2D', '#3A7BD5'];
+  var DOW = '일월화수목금토';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function hm(min) { if (!min) return '0분'; var h = Math.floor(min / 60), m = min % 60, o = []; if (h) o.push(h + '시간'); if (m) o.push(m + '분'); return o.join(' '); }
+  function toast(msg, err) { var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = 'toast'; }, 2600); }
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  function kind(st) {
+    st = st || '';
+    if (/결근|지각|조퇴|출근누락/.test(st)) return 'bad';
+    if (/퇴근누락|미출근/.test(st)) return 'warn';
+    if (/근무중|휴게중|스케줄외/.test(st)) return 'info';
+    if (/정상/.test(st)) return 'ok';
+    return '';
+  }
+  function stClass(s) {
+    s = s || '';
+    var order = ['결근', '지각', '조퇴', '출근누락', '퇴근누락', '미출근', '휴게중', '근무중', '정상', '스케줄외', '예정', '기록전'];
+    for (var i = 0; i < order.length; i++) if (s.indexOf(order[i]) >= 0) return 'st-' + order[i];
+    return 'st-예정';
+  }
+  function pill(st) { return '<span class="pill ' + stClass(st) + '">' + esc(st) + '</span>'; }
+  function color(name) {
+    var list = S.data.staff;
+    for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i].color || (list[i].type === '직원' ? '#245E3E' : PALETTE[i % PALETTE.length]);
+    return '#245E3E';
+  }
+  function avatar(name) { return '<span class="avatar" style="background:' + color(name) + '">' + esc(name.charAt(0)) + '</span>'; }
+  function staffType(name) { var s = S.data.staff.filter(function (x) { return x.name === name; })[0]; return s ? s.type : '알바'; }
+
+  /* ---------------- 불러오기 ---------------- */
+  function load(ym, manual) {
+    if (S.loading) return;
+    S.loading = true;
+    $('sync-dot').className = 'sync-dot busy'; $('sync-text').textContent = '불러오는 중…';
+    google.script.run.withSuccessHandler(function (d) {
+      S.loading = false; S.data = d; S.ym = d.ym;
+      if (d.ym === d.today.slice(0, 7)) lsSet('sunsun-board', JSON.stringify(d));
+      var now = new Date();
+      $('sync-dot').className = 'sync-dot'; $('sync-text').textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' 업데이트';
+      $('hero-sub').textContent = (+d.ym.slice(5)) + '월 · 출근 기준: 근무시작 ' + d.prep.staff + '분 전(직원) / ' + d.prep.part + '분 전(알바)';
+      if (d.logoUrl) $('logo').innerHTML = '<img class="logo-img" src="' + esc(d.logoUrl) + '" alt="선선커피">';
+      render();
+      if (manual) toast('최신 기록을 불러왔어요');
+    }).withFailureHandler(function (e) {
+      S.loading = false;
+      $('sync-dot').className = 'sync-dot'; $('sync-text').textContent = '불러오기 실패';
+      $('summary').innerHTML = '<div class="err">' + esc(e.message || e) + '</div>';
+    }).getBoardData(ym || '');
+  }
+
+  /* ---------------- 집계 ---------------- */
+  function tally(name) {
+    var w = S.data.work.filter(function (x) { return x.name === name; });
+    var t = { due: 0, planned: 0, came: 0, late: 0, lateMin: 0, absent: 0, miss: 0, actual: 0, plannedMin: 0 };
+    w.forEach(function (x) {
+      if (x.planned > 0) { t.planned++; t.plannedMin += x.planned; if (!/예정|기록전|미출근/.test(x.status)) t.due++; }
+      if (x.tin) t.came++;
+      if (/지각/.test(x.status)) { t.late++; t.lateMin += x.late; }
+      if (/결근/.test(x.status)) t.absent++;
+      if (/누락/.test(x.status)) t.miss++;
+      if (x.actual) t.actual += x.actual;
+    });
+    return t;
+  }
+  function people() {
+    var names = [];
+    S.data.staff.forEach(function (s) { names.push(s.name); });
+    S.data.work.forEach(function (w) { if (names.indexOf(w.name) < 0) names.push(w.name); });
+    // 이번 달 스케줄이나 기록이 있는 사람만
+    return names.filter(function (n) { return S.data.work.some(function (w) { return w.name === n; }); });
+  }
+
+  /* ---------------- 렌더 ---------------- */
+  function render() {
+    var d = S.data;
+    $('months').innerHTML = d.months.map(function (m) {
+      return '<button class="m-btn' + (m === d.ym ? ' on' : '') + '" onclick="load(\'' + m + '\')">' + (+m.slice(5)) + '월' + (m.slice(0, 4) !== d.today.slice(0, 4) ? ' (' + m.slice(2, 4) + ')' : '') + '</button>';
+    }).join('');
+    $('tab-summary').className = 'tab' + (S.tab === 'summary' ? ' on' : '');
+    $('tab-calendar').className = 'tab' + (S.tab === 'calendar' ? ' on' : '');
+    $('summary').hidden = S.tab !== 'summary';
+    $('calendar').hidden = S.tab !== 'calendar';
+    if (S.tab === 'summary') renderSummary(); else renderCalendar();
+  }
+
+  function renderSummary() {
+    var d = S.data, h = '';
+    // 오늘 현황 (이번 달을 볼 때만)
+    if (d.ym === d.today.slice(0, 7)) {
+      h += '<h2 class="sec-title">오늘 근무 <small>' + (+d.today.slice(5, 7)) + '월 ' + (+d.today.slice(8)) + '일 ' + DOW[new Date(d.today + 'T12:00').getDay()] + '요일</small></h2><div class="today-grid">';
+      d.stores.forEach(function (st) {
+        var list = d.work.filter(function (w) { return w.date === d.today && w.store === st.name; });
+        var off = !list.some(function (w) { return w.planned > 0; });
+        h += '<div class="store-card' + (off ? ' off' : '') + '"><h3>' + esc(st.name) + (st.area ? ' · ' + esc(st.area) : '') + '<small>' + list.filter(function (w) { return w.planned; }).length + '명</small></h3>';
+        if (off) h += '<div class="empty" style="color:#8B1D1D;font-weight:700">휴무</div>';
+        list.forEach(function (w) {
+          h += '<div class="t-row"><b style="color:' + color(w.name) + '">' + esc(w.name) + '</b><div class="when num">' +
+            (w.planned ? esc(w.parts) + ' ' + w.start + '–' + w.end : '스케줄 없음') +
+            '<small>' + (w.tin ? '출근 ' + w.tin + (w.tout ? ' · 퇴근 ' + w.tout : '') : (w.planned ? w.deadline + '까지 출근' : '')) + '</small></div>' + pill(w.status) + '</div>';
+        });
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+
+    var names = people(), sum = { planned: 0, late: 0, lateMin: 0, absent: 0 };
+    var cards = names.map(function (n, i) {
+      var t = tally(n);
+      sum.planned += t.planned; sum.late += t.late; sum.lateMin += t.lateMin; sum.absent += t.absent;
+      return '<button class="m-card' + (t.late || t.absent ? ' warn' : '') + '" onclick="goCal(\'' + esc(n) + '\')">' +
+        '<div class="m-head">' + avatar(n) + '<div><div class="m-name">' + esc(n) + '</div><div class="m-sub">' + staffType(n) + ' · ' + (+d.ym.slice(5)) + '월 달력 보기 ›</div></div></div>' +
+        '<div class="m-stats"><div class="stat"><small>출근</small><b>' + t.came + '<span> / ' + t.due + '일</span></b></div>' +
+        '<div class="stat' + (t.late ? ' bad' : '') + '"><small>지각</small><b>' + t.late + '<span>회 ' + (t.lateMin ? t.lateMin + '분' : '') + '</span></b></div>' +
+        '<div class="stat' + (t.absent ? ' bad' : '') + '"><small>결근</small><b>' + t.absent + '<span>회</span></b></div></div>' +
+        '<div class="m-foot"><span>이번 달 예정 ' + hm(t.plannedMin) + '</span><span>실제 ' + hm(t.actual) + '</span></div></button>';
+    });
+    h += '<div class="tiles">' +
+      '<div class="tile"><small>이번 달 근무자</small><b>' + names.length + '<span>명</span></b></div>' +
+      '<div class="tile"><small>예정 근무</small><b>' + sum.planned + '<span>회</span></b></div>' +
+      '<div class="tile' + (sum.late ? ' bad' : '') + '"><small>지각 합계</small><b>' + sum.late + '<span>회 · ' + sum.lateMin + '분</span></b></div>' +
+      '<div class="tile' + (sum.absent ? ' bad' : '') + '"><small>결근 합계</small><b>' + sum.absent + '<span>회</span></b></div></div>';
+    h += '<h2 class="sec-title">사람별 기록 <small>카드를 누르면 달력으로 이동해요 · ' + esc(d.startDate) + '부터 판정</small></h2>';
+    h += names.length ? '<div class="members">' + cards.join('') + '</div>' : '<div class="placeholder">이 달에는 표시할 기록이 없어요.</div>';
+    $('summary').innerHTML = h;
+  }
+
+  function renderCalendar() {
+    var d = S.data, names = people();
+    if (!names.length) { $('calendar').innerHTML = '<div class="placeholder">이 달에는 표시할 기록이 없어요.</div>'; return; }
+    if (names.indexOf(S.person) < 0) S.person = names.indexOf(lsGet('sunsun-me')) >= 0 ? lsGet('sunsun-me') : names[0];
+    var n = S.person, t = tally(n);
+    var h = '<div class="people">' + names.map(function (x) {
+      return '<button class="p-btn' + (x === n ? ' on' : '') + '" onclick="pick(\'' + esc(x) + '\')">' + avatar(x) + esc(x) + '</button>';
+    }).join('') + '</div>';
+    h += '<div class="cal-card"><div class="cal-head"><div class="cal-who">' + avatar(n) + '<div><h2>' + esc(n) + ' <small style="font-size:14px;color:var(--ink-3);font-weight:500">' + staffType(n) + '</small></h2><p>' + d.ym.slice(0, 4) + '년 ' + (+d.ym.slice(5)) + '월 출퇴근 기록</p></div></div>' +
+      '<div class="chips"><span class="chip">출근 <span class="num">' + t.came + '</span> / ' + t.due + '일</span>' +
+      '<span class="chip' + (t.late ? ' bad' : '') + '">지각 <span class="num">' + t.late + '</span>회' + (t.lateMin ? ' · ' + t.lateMin + '분' : '') + '</span>' +
+      '<span class="chip' + (t.absent ? ' bad' : '') + '">결근 <span class="num">' + t.absent + '</span>회</span>' +
+      '<span class="chip">실제 ' + hm(t.actual) + '</span>' +
+      '<button class="print-btn" onclick="doPrint()">🖨 A4 인쇄</button></div></div>';
+
+    h += '<div class="cal-scroll"><div class="grid">';
+    ['일', '월', '화', '수', '목', '금', '토'].forEach(function (x, i) { h += '<div class="dh ' + (i === 0 ? 'sun' : i === 6 ? 'sat' : '') + '">' + x + '</div>'; });
+    var y = +d.ym.slice(0, 4), m = +d.ym.slice(5), first = new Date(y, m - 1, 1).getDay(), last = new Date(y, m, 0).getDate();
+    for (var i = 0; i < first; i++) h += '<div class="c blank"></div>';
+    for (var day = 1; day <= last; day++) {
+      var date = d.ym + '-' + pad(day), w = (first + day - 1) % 7;
+      var ents = d.work.filter(function (x) { return x.date === date && x.name === n; });
+      var ks = ents.map(function (x) { return kind(x.status); });
+      var k = ks.indexOf('bad') >= 0 ? 'bad' : ks.indexOf('warn') >= 0 ? 'warn' : ks.indexOf('info') >= 0 ? 'info' : ks.indexOf('ok') >= 0 ? 'ok' : '';
+      var cls = 'c' + (!ents.length ? ' off' : '') + (k ? ' k-' + k : '') + (date === d.today ? ' today' : '');
+      h += '<div class="' + cls + '"><div class="dn ' + (w === 0 ? 'sun' : w === 6 ? 'sat' : '') + '">' + day + '</div>';
+      if (!ents.length) h += '<div class="offtxt">휴무</div>';
+      ents.forEach(function (x) {
+        h += '<div class="ent"><span class="where">' + esc(x.store) + (x.parts ? ' ' + esc(x.parts) : '') + (x.planned ? ' ' + x.start + '–' + x.end : '') + '</span>' +
+          (x.tin || x.tout ? '<span class="tm"><span><i>출</i>' + (x.tin || '--:--') + '</span><span><i>퇴</i>' + (x.tout || '--:--') + '</span></span>' : '') +
+          pill(x.status + (x.late ? ' ' + x.late + '분' : '')) + '</div>';
+      });
+      h += '</div>';
+    }
+    h += '</div></div><div class="legend">' + ['정상', '지각', '결근', '조퇴', '퇴근누락', '근무중', '스케줄외', '예정'].map(pill).join('') + '</div>' +
+      '<div class="hint">출근 기준은 근무 시작 ' + d.prep.staff + '분 전(직원) / ' + d.prep.part + '분 전(알바)이에요. 기록이 잘못됐으면 관리자에게 말해주세요.</div></div>';
+    $('calendar').innerHTML = h;
+  }
+
+  function setTab(t) { S.tab = t; render(); }
+  function goCal(n) { S.person = n; S.tab = 'calendar'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function pick(n) { S.person = n; lsSet('sunsun-me', n); renderCalendar(); }
+
+  function fitPrint() {
+    document.body.classList.add('printing');
+    var w = document.querySelector('.wrap'); w.style.zoom = '';
+    var z = Math.min(1, 730 / w.getBoundingClientRect().height);
+    w.style.zoom = z < 1 ? String(Math.floor(z * 100) / 100) : '';
+  }
+  function unfitPrint() { document.querySelector('.wrap').style.zoom = ''; document.body.classList.remove('printing'); }
+  window.addEventListener('beforeprint', function () { if (S.tab === 'calendar') fitPrint(); });
+  window.addEventListener('afterprint', unfitPrint);
+  function doPrint() { fitPrint(); window.print(); unfitPrint(); }
+
+  // 지난번 데이터로 먼저 그리고, 최신 데이터로 바꿈
+  try {
+    var cached = JSON.parse(localStorage.getItem('sunsun-board') || 'null');
+    if (cached && cached.ym) { S.data = cached; S.ym = cached.ym; render(); $('sync-text').textContent = '최신 기록 불러오는 중…'; }
+  } catch (e) {}
+  load('');
+  // 1분마다 자동 새로고침 (화면이 보일 때만)
+  setInterval(function () { if (!document.hidden && S.data) load(S.ym); }, 60000);
+</script>
+</body>
+</html>

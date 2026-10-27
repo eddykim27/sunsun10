@@ -1,0 +1,4 @@
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+/api.js
+  Cache-Control: public, max-age=60

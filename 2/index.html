@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<script src="/api.js"></script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>선선 출퇴근</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,700..900,100,1&family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700;900&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+  /* 선선커피 공통 스타일 — 매장 간판의 초록·오렌지·크림을 그대로 가져옴 */
+  :root {
+    --green: #1E9A4C;
+    --green-2: #157A3B;
+    --green-deep: #245E3E;
+    --green-soft: #E3F3E8;
+    --orange: #F07A22;
+    --orange-soft: #FFEBDB;
+    --cream: #FBF6EC;
+    --paper: #FFFFFF;
+    --ink: #1D2A22;
+    --ink-2: #56645B;
+    --ink-3: #93A098;
+    --line: #E7E1D3;
+    --ok: #1E8A4A;      --ok-bg: #E2F4E8;
+    --late: #D2402F;    --late-bg: #FDE5E1;
+    --warn: #A86A00;    --warn-bg: #FFF2CF;
+    --info: #2C5BD6;    --info-bg: #E5ECFF;
+    --mute: #8A8F8B;    --mute-bg: #F0EEE8;
+    --sun: #D2402F;     --sat: #2C5BD6;
+    --f-body: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    --f-round: 'Gowun Dodum', 'Noto Sans KR', sans-serif;
+    --f-num: 'Outfit', 'Noto Sans KR', system-ui, sans-serif;
+    --f-logo: 'Fraunces', Georgia, serif;
+    --r-lg: 22px; --r-md: 16px; --r-sm: 11px;
+    --shadow: 0 1px 2px rgba(29,42,34,.05), 0 8px 22px rgba(29,42,34,.07);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--cream); color: var(--ink); font-family: var(--f-body); line-height: 1.5; -webkit-text-size-adjust: 100%; }
+  button, input, select, textarea { font-family: inherit; color: inherit; font-size: inherit; }
+  button { cursor: pointer; }
+  .num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+
+  /* 로고: 간판처럼 세 줄로 쌓인 웨이브 세리프 */
+  .logo { display: inline-flex; flex-direction: column; align-items: center; line-height: .86; font-family: var(--f-logo);
+    font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 96; font-weight: 900; color: #fff; letter-spacing: .01em;
+    text-shadow: 0.04em 0.05em 0 rgba(0,0,0,.22); user-select: none; }
+  .logo span { display: block; }
+  .logo span:nth-child(1) { transform: rotate(-5deg) translateX(-.08em); }
+  .logo span:nth-child(2) { transform: rotate(3deg) translateX(.1em); }
+  .logo span:nth-child(3) { transform: rotate(-2deg); font-size: .92em; }
+  .logo-img { display: block; max-height: 100%; max-width: 100%; }
+  .logo-box { background: var(--green); border-radius: 14px; display: grid; place-items: center; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .st-정상 { background: var(--ok-bg); color: var(--ok); }
+  .st-지각, .st-결근, .st-조퇴, .st-출근누락 { background: var(--late-bg); color: var(--late); }
+  .st-퇴근누락, .st-미출근 { background: var(--warn-bg); color: var(--warn); }
+  .st-근무중 { background: var(--info-bg); color: var(--info); }
+  .st-휴게중 { background: #FFF2CF; color: #8A5A00; }
+  .st-예정, .st-기록전, .st-스케줄외 { background: var(--mute-bg); color: var(--mute); }
+
+  .spinner { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(30,154,76,.2); border-top-color: var(--green); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 999px; font-size: 14px; z-index: 200; transition: .25s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--late); }
+</style>
+
+<style>
+  body { min-height: 100vh; padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+  .top { background: var(--green); color: #fff; padding: calc(18px + env(safe-area-inset-top, 0px)) 18px 64px; position: relative; overflow: hidden; }
+  .top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 34px; background: var(--cream); border-radius: 34px 34px 0 0; }
+  .top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 520px; margin: 0 auto; position: relative; z-index: 1; }
+  .top .logo-box { width: 74px; height: 74px; background: transparent; box-shadow: none; }
+  .top .logo { font-size: 23px; }
+  .store-chip { background: var(--orange); color: #fff; border-radius: 14px; padding: 8px 14px; text-align: right; box-shadow: 0 6px 16px rgba(240,122,34,.35); }
+  .store-chip b { display: block; font-size: 19px; line-height: 1.2; }
+  .store-chip small { font-size: 12px; opacity: .9; }
+  .clock { max-width: 520px; margin: 14px auto 0; position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .clock .time { font-family: var(--f-num); font-weight: 700; font-size: 52px; letter-spacing: -.02em; line-height: 1; }
+  .clock .date { font-size: 14px; opacity: .9; text-align: right; }
+
+  main { max-width: 520px; margin: -30px auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 2; }
+  .card { background: var(--paper); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--shadow); }
+  .card h2 { font-family: var(--f-round); font-size: 18px; font-weight: 400; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .card h2 small { font-family: var(--f-body); font-size: 12px; color: var(--ink-3); }
+
+  .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+  .name-btn { border: 1.5px solid var(--line); background: var(--paper); border-radius: 14px; padding: 11px 6px; font-size: 16px; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: transform .15s, background .15s; }
+  .name-btn small { font-size: 11px; font-weight: 500; color: var(--ink-3); }
+  .name-btn.today { border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+  .name-btn.today small { color: var(--green); }
+  .name-btn:active { transform: scale(.96); }
+  .name-btn.sel { background: var(--green); border-color: var(--green); color: #fff; }
+  .name-btn.sel small { color: rgba(255,255,255,.85); }
+
+  .mine { border-radius: var(--r-md); background: var(--green-soft); padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+  .mine.none { background: var(--mute-bg); }
+  .mine-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .mine-who { font-size: 18px; font-weight: 900; }
+  .mine-line { font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .mine-line .num { font-weight: 700; font-size: 18px; }
+  .mine-sub { font-size: 13px; color: var(--ink-2); }
+  .mine-rec { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+  .rec { background: var(--paper); border-radius: 12px; padding: 8px 10px; }
+  .rec small { font-size: 11px; color: var(--ink-3); display: block; }
+  .rec b { font-family: var(--f-num); font-size: 20px; }
+
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .act { border: none; border-radius: 18px; padding: 20px 10px; font-size: 21px; font-weight: 900; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: inset 0 -4px 0 rgba(0,0,0,.14); transition: transform .12s, opacity .2s; }
+  .act small { font-size: 12px; font-weight: 500; opacity: .9; }
+  .act.in { background: var(--green); }
+  .act.out { background: var(--orange); }
+  .act:active { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0,0,0,.14); }
+  .act:disabled { opacity: .4; cursor: not-allowed; }
+  .act.brk { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 10px; padding: 14px 10px; font-size: 18px;
+    background: var(--cream); color: var(--green-deep); border: 2px solid var(--green); box-shadow: none; }
+  .act.brk small { font-size: 13px; color: var(--ink-2); opacity: 1; }
+  .act.brk.on { background: #FFF2CF; border-color: #E2A100; color: #8A5A00; }
+  .big-ico.brk { background: #E2A100; }
+  .loc { margin-top: 12px; font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: none; }
+  .dot.ok { background: var(--green); } .dot.bad { background: var(--late); } .dot.wait { background: var(--warn); }
+
+  .list { display: flex; flex-direction: column; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: none; padding-top: 0; }
+  .row .who { font-weight: 700; min-width: 48px; }
+  .row .part { font-size: 12px; color: var(--ink-3); }
+  .row .when { font-size: 13px; color: var(--ink-2); flex: 1; }
+  .empty { color: var(--ink-3); font-size: 14px; text-align: center; padding: 8px 0; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(20,40,28,.55); display: none; align-items: flex-end; justify-content: center; z-index: 100; padding: 16px; }
+  .overlay.show { display: flex; }
+  .sheet { background: var(--paper); border-radius: 26px; width: 100%; max-width: 480px; padding: 26px 22px calc(22px + env(safe-area-inset-bottom, 0px)); text-align: center; animation: up .3s cubic-bezier(.2,.8,.2,1); }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .big-ico { width: 78px; height: 78px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center; font-size: 38px; color: #fff; background: var(--green); }
+  .big-ico.out { background: var(--orange); }
+  .big-ico.bad { background: var(--late); }
+  .sheet h3 { font-size: 22px; font-weight: 900; }
+  .sheet .t { font-family: var(--f-num); font-size: 44px; font-weight: 700; line-height: 1.1; margin: 4px 0 8px; }
+  .sheet p { color: var(--ink-2); font-size: 14px; margin-top: 6px; }
+  .sheet .close { margin-top: 18px; width: 100%; border: none; background: var(--ink); color: #fff; border-radius: 14px; padding: 14px; font-size: 16px; font-weight: 700; }
+  .loading { display: flex; justify-content: center; padding: 24px; }
+  .err-card { background: var(--late-bg); color: var(--late); border-radius: var(--r-md); padding: 16px; font-size: 14px; }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-row">
+      <div class="logo-box" id="logo"><div class="logo"><span>SUN</span><span>SUN</span><span>COFFEE</span></div></div>
+      <div class="store-chip"><b id="store-name">선선커피</b><small id="store-area">출퇴근</small></div>
+    </div>
+    <div class="clock">
+      <div class="time" id="clock">--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="card loading"><div class="spinner"></div></div>
+  </main>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="sheet" id="sheet"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  var STORE_PARAM = "2";
+  var INIT = null;   // 서버가 페이지와 함께 보낸 첫 화면 데이터
+  var KEY = 'sunsun-name-' + STORE_PARAM;
+  var info = null, selected = null, pos = null, posErr = null, busy = false;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function stClass(s) {
+    s = s || '';
+    var order = ['결근', '지각', '조퇴', '출근누락', '퇴근누락', '미출근', '휴게중', '근무중', '정상', '스케줄외', '예정', '기록전'];
+    for (var i = 0; i < order.length; i++) if (s.indexOf(order[i]) >= 0) return 'st-' + order[i];
+    return 'st-예정';
+  }
+  function hm(min) { if (min == null) return ''; var h = Math.floor(min / 60), m = min % 60, o = []; if (h) o.push(h + '시간'); if (m || !h) o.push(m + '분'); return o.join(' '); }
+  function toast(msg, err) { var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = 'toast'; }, 2800); }
+  function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function storeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  function tick() {
+    var d = new Date();
+    $('clock').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    $('date').innerHTML = (d.getMonth() + 1) + '월 ' + d.getDate() + '일<br>' + '일월화수목금토'[d.getDay()] + '요일';
+  }
+  tick(); setInterval(tick, 1000 * 10);
+
+  function applyInfo(res) {
+    info = res;
+    $('store-name').textContent = res.store.name;
+    $('store-area').textContent = (res.store.area || '') + ' 출퇴근';
+    if (res.logoUrl) $('logo').innerHTML = '<img class="logo-img" src="' + esc(res.logoUrl) + '" alt="선선커피">';
+    var saved = storeGet(KEY);
+    if (!selected && saved && res.staff.some(function (s) { return s.name === saved; })) selected = saved;
+    render();
+  }
+
+  var CACHE_KEY = 'sunsun-info-' + STORE_PARAM;
+  function localToday() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+  function load() {
+    // 지난번에 받아둔 화면 데이터가 있으면 먼저 바로 보여주기 (QR 찍자마자 이름이 뜸)
+    if (!info) {
+      try {
+        var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (c && c.store) {
+          if (c.today !== localToday()) c.todayList = [];
+          c.stale = true;
+          applyInfo(c);
+          if (c.needLocation) locate();
+        }
+      } catch (e) {}
+    }
+    google.script.run.withSuccessHandler(function (res) {
+      var first = !info || info.stale;
+      storeSet(CACHE_KEY, JSON.stringify(res));
+      applyInfo(res);
+      if (res.needLocation && first && !pos) locate();
+    }).withFailureHandler(function (e) {
+      if (info) { toast('최신 정보를 불러오지 못했어요. 그래도 출퇴근은 기록할 수 있어요.', true); return; }
+      $('main').innerHTML = '<div class="err-card">' + esc(e.message || e) + '</div>';
+    }).getCheckinInfo(STORE_PARAM);
+  }
+
+  function locate() {
+    if (!navigator.geolocation) { posErr = '이 기기에서는 위치를 확인할 수 없어요.'; renderLoc(); return; }
+    posErr = null; renderLoc();
+    navigator.geolocation.getCurrentPosition(function (p) {
+      pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, at: Date.now() };
+      renderLoc();
+    }, function (err) {
+      posErr = err.code === 1 ? '위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해주세요.' : '위치를 찾지 못했어요. 다시 시도해주세요.';
+      renderLoc();
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+  }
+
+  function renderLoc() {
+    var el = $('loc'); if (!el || !info) return;
+    if (!info.needLocation) { el.innerHTML = '<span class="dot ok"></span>위치 확인 없이 기록돼요'; return; }
+    if (posErr) { el.innerHTML = '<span class="dot bad"></span>' + esc(posErr) + ' <button onclick="locate()" style="border:none;background:none;color:var(--green);font-weight:700">다시</button>'; return; }
+    if (!pos) { el.innerHTML = '<span class="dot wait"></span>위치 확인 중…'; return; }
+    el.innerHTML = '<span class="dot ok"></span>위치 확인됨 (오차 ' + Math.round(pos.acc) + 'm)';
+  }
+
+  function todayOf(name) { return (info.todayList || []).filter(function (w) { return w.name === name; })[0] || null; }
+
+  function render() {
+    var todayNames = (info.todayList || []).filter(function (w) { return w.planned > 0; }).map(function (w) { return w.name; });
+    // 오늘 근무자를 앞으로
+    var staff = info.staff.slice().sort(function (a, b) {
+      var x = todayNames.indexOf(a.name) >= 0 ? 0 : 1, y = todayNames.indexOf(b.name) >= 0 ? 0 : 1;
+      return x - y;
+    });
+    var html = '';
+    html += '<section class="card"><h2>이름을 눌러주세요</h2><div class="names">';
+    staff.forEach(function (s) {
+      var on = todayNames.indexOf(s.name) >= 0;
+      html += '<button class="name-btn' + (on ? ' today' : '') + (selected === s.name ? ' sel' : '') + '" data-name="' + esc(s.name) + '">' + esc(s.name) +
+        '<small>' + (on ? '오늘 근무' : s.type) + '</small></button>';
+    });
+    html += '</div></section>';
+
+    html += '<section class="card" id="me-card">' + meHtml() + '</section>';
+
+    html += '<section class="card"><h2>오늘 ' + esc(info.store.name) + ' 근무자 <small>' + info.dow + '요일</small></h2><div class="list">';
+    var list = info.todayList || [];
+    if (!list.length) html += '<div class="empty">' + (info.stale ? '불러오는 중…' : '오늘은 이 매장 스케줄이 없어요') + '</div>';
+    list.forEach(function (w) {
+      var rec = w.tin ? ('출근 ' + w.tin + (w.tout ? ' · 퇴근 ' + w.tout : '')) : (w.planned ? w.start + '–' + w.end : '');
+      html += '<div class="row"><div class="who">' + esc(w.name) + '<div class="part">' + esc(w.parts || '') + '</div></div>' +
+        '<div class="when num">' + esc(rec) + '</div><span class="pill ' + stClass(w.status) + '">' + esc(w.status) + '</span></div>';
+    });
+    html += '</div></section>';
+    $('main').innerHTML = html;
+    Array.prototype.forEach.call(document.querySelectorAll('.name-btn'), function (b) {
+      b.onclick = function () { selected = b.getAttribute('data-name'); storeSet(KEY, selected); render(); };
+    });
+    renderLoc();
+  }
+
+  function meHtml() {
+    if (!selected) {
+      return '<div class="mine none"><div class="mine-sub">위에서 이름을 먼저 골라주세요.</div></div>' + actionsHtml(true);
+    }
+    var w = todayOf(selected);
+    var h = '';
+    if (w && w.planned > 0) {
+      h += '<div class="mine"><div class="mine-top"><span class="mine-who">' + esc(selected) + '</span><span class="pill ' + stClass(w.status) + '">' + esc(w.status) + '</span></div>' +
+        '<div class="mine-line">' + esc(w.parts) + ' <span class="num">' + w.start + ' – ' + w.end + '</span></div>' +
+        '<div class="mine-sub">출근 기준 <b class="num">' + w.deadline + '</b>까지 · 예정 ' + hm(w.planned) + '</div>';
+      if (w.tin || w.tout) {
+        h += '<div class="mine-rec"><div class="rec"><small>출근</small><b>' + (w.tin || '—') + '</b></div><div class="rec"><small>퇴근</small><b>' + (w.tout || '—') + '</b></div></div>';
+      }
+      if (w.breaks) h += '<div class="mine-sub">휴게 ' + esc(w.breaks) + (w.breakOpen ? ' (휴게중)' : '') + '</div>';
+      else if (w.breakMin > 0) h += '<div class="mine-sub">휴게 ' + w.breakMin + '분 포함 (급여에서 제외)</div>';
+      h += '</div>';
+    } else {
+      h += '<div class="mine none"><div class="mine-top"><span class="mine-who">' + esc(selected) + '</span>' +
+        (w ? '<span class="pill ' + stClass(w.status) + '">' + esc(w.status) + '</span>' : '') + '</div>' +
+        '<div class="mine-sub">오늘 ' + esc(info.store.name) + ' 스케줄이 없어요. 그래도 기록은 남길 수 있어요.</div>' +
+        (w && (w.tin || w.tout) ? '<div class="mine-rec"><div class="rec"><small>출근</small><b>' + (w.tin || '—') + '</b></div><div class="rec"><small>퇴근</small><b>' + (w.tout || '—') + '</b></div></div>' : '') +
+        '</div>';
+    }
+    return h + actionsHtml(false);
+  }
+
+  function actionsHtml(disabled) {
+    var w = selected ? todayOf(selected) : null;
+    var onBreak = !!(w && w.breakOpen);
+    var canBreak = !!(w && w.tin && !w.tout);
+    var showBreak = !(info.store && info.store.noBreak);
+    return '<div class="actions">' +
+      '<button class="act in" ' + (disabled ? 'disabled' : '') + ' onclick="go(\'출근\')">출근<small>지금 왔어요</small></button>' +
+      '<button class="act out" ' + (disabled ? 'disabled' : '') + ' onclick="go(\'퇴근\')">퇴근<small>오늘 끝!</small></button>' +
+      (showBreak ? '<button class="act brk' + (onBreak ? ' on' : '') + '" ' + (disabled || !canBreak ? 'disabled' : '') + ' onclick="go(\'휴게\')">' +
+        (onBreak ? '☕ 휴게 끝<small>다시 일하러 왔어요</small>' : '🍚 휴게<small>' + (canBreak ? '밥 먹으러 나가요' : '출근 후에 찍을 수 있어요') + '</small>') + '</button>' : '') +
+      '</div><div class="loc" id="loc"></div>';
+  }
+
+  function go(kind) {
+    if (busy || !selected) return;
+    if (info.needLocation && !pos) {
+      if (posErr) { toast(posErr, true); locate(); return; }
+      toast('위치를 확인하는 중이에요. 잠시만요!'); return;
+    }
+    if (info.needLocation && Date.now() - pos.at > 60000) { locate(); toast('위치를 다시 확인했어요. 한 번 더 눌러주세요.'); return; }
+    busy = true;
+    showSheet('<div class="loading"><div class="spinner"></div></div><p>' + kind + ' 기록 중…</p>');
+    google.script.run.withSuccessHandler(function (r) {
+      busy = false;
+      if (!r.ok) {
+        showSheet('<div class="big-ico bad">!</div><h3>기록하지 못했어요</h3><p>' + esc(r.message) + '</p><button class="close" onclick="hideSheet();locate()">확인</button>');
+        return;
+      }
+      var w = r.work, isIn = r.kind === '출근';
+      if (r.kind === '휴게') {
+        var start = r.breakState === '시작';
+        showSheet('<div class="big-ico brk">' + (start ? '🍚' : '☕') + '</div><h3>' + esc(r.name) + '님 ' + (start ? '휴게 시작!' : '휴게 끝!') + '</h3>' +
+          '<div class="t">' + esc(r.time) + '</div>' +
+          '<p>' + (start ? '맛있게 드세요. 들어오면 <b>휴게</b>를 한 번 더 눌러주세요.' : '휴게 ' + esc((w && w.breaks) || '') + '<br>다시 화이팅!') + '</p>' +
+          '<button class="close" onclick="hideSheet()">확인</button>');
+        refreshAfter(r);
+        return;
+      }
+      var title = r.result === '유지' ? '이미 출근했어요' : (r.result === '갱신' ? '퇴근 시간을 바꿨어요' : r.kind + ' 완료!');
+      var msg = '';
+      if (w && w.planned > 0) {
+        msg += '<p>' + esc(w.parts) + ' ' + w.start + '–' + w.end + '</p>';
+        msg += '<p><span class="pill ' + stClass(w.status) + '">' + esc(w.status) + (w.late > 0 ? ' ' + w.late + '분' : '') + '</span></p>';
+        if (!isIn && w.actual != null) msg += '<p>오늘 근무 ' + hm(w.actual) + ' (예정 ' + hm(w.planned) + ')</p>';
+      } else {
+        msg += '<p>오늘 ' + esc(r.store) + ' 스케줄이 없어서 <b>스케줄외</b>로 기록됐어요.</p>';
+      }
+      if (r.elsewhere && r.elsewhere.length) msg += '<p>참고: 오늘 ' + esc(r.elsewhere.join(', ')) + ' 근무도 있어요.</p>';
+      var good = !w || (w.status.indexOf('지각') < 0 && w.status.indexOf('조퇴') < 0);
+      showSheet('<div class="big-ico ' + (isIn ? '' : 'out') + '">' + (good ? '✓' : '!') + '</div><h3>' + esc(r.name) + '님 ' + title + '</h3>' +
+        '<div class="t">' + esc(r.time) + '</div>' + msg +
+        '<button class="close" onclick="hideSheet()">확인</button>');
+      refreshAfter(r);
+    }).withFailureHandler(function (e) {
+      busy = false;
+      showSheet('<div class="big-ico bad">!</div><h3>오류가 났어요</h3><p>' + esc(e.message || e) + '</p><button class="close" onclick="hideSheet()">닫기</button>');
+    }).checkIn({ store: STORE_PARAM, name: selected, kind: kind, lat: pos && pos.lat, lng: pos && pos.lng, acc: pos && pos.acc });
+  }
+
+  /** 기록 응답에 오늘 근무자 목록이 같이 오므로 다시 불러오지 않고 바로 화면 갱신 */
+  function refreshAfter(r) {
+    if (r && r.todayList && info) { info.todayList = r.todayList; info.stale = false; render(); }
+    else load();
+  }
+
+  function showSheet(html) { $('sheet').innerHTML = html; $('overlay').classList.add('show'); }
+  function hideSheet() { $('overlay').classList.remove('show'); }
+
+  if (INIT) { applyInfo(INIT); if (INIT.needLocation) locate(); }
+  else load();
+</script>
+</body>
+</html>
