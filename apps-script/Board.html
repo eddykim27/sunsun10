@@ -197,7 +197,7 @@
     for (var i = 0; i < order.length; i++) if (s.indexOf(order[i]) >= 0) return 'st-' + order[i];
     return 'st-예정';
   }
-  function pill(st) { return '<span class="pill ' + stClass(st) + '">' + esc(st) + '</span>'; }
+  function pill(st, text) { return '<span class="pill ' + stClass(st) + '">' + esc(text || st) + '</span>'; }
   function color(name) {
     var list = S.data.staff;
     for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i].color || (list[i].type === '직원' ? '#245E3E' : PALETTE[i % PALETTE.length]);
@@ -333,7 +333,7 @@
       ents.forEach(function (x) {
         h += '<div class="ent"><span class="where">' + esc(x.store) + (x.parts ? ' ' + esc(x.parts) : '') + (x.planned ? ' ' + x.start + '–' + x.end : '') + '</span>' +
           (x.tin || x.tout ? '<span class="tm"><span><i>출</i>' + (x.tin || '--:--') + '</span><span><i>퇴</i>' + (x.tout || '--:--') + '</span></span>' : '') +
-          pill(x.status + (x.late ? ' ' + x.late + '분' : '')) + '</div>';
+          pill(x.status, x.late ? x.status.replace('지각', '지각 ' + x.late + '분').replace(/·/g, ' ') : '') + '</div>';
       });
       h += '</div>';
     }

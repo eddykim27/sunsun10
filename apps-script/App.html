@@ -244,6 +244,7 @@
   function dObj(d) { return new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10), 12); }
   function dStr(o) { return o.getFullYear() + '-' + pad(o.getMonth() + 1) + '-' + pad(o.getDate()); }
   function addDays(d, n) { var o = dObj(d); o.setDate(o.getDate() + n); return dStr(o); }
+  function stLabel(w) { return w.late > 0 ? w.status.replace('지각', '지각 ' + w.late + '분').replace(/·/g, ' ') : w.status; }
   function dow(d) { return dObj(d).getDay(); }
   function shiftYm(ym, n) { var y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + pad(m + 1); }
   function toast(msg, err) { var t = $('toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = 'toast'; }, 2800); }
@@ -616,8 +617,8 @@
       if (!list.length) h += '<div class="hint">기록·스케줄 없음</div>';
       list.forEach(function (w) {
         h += '<div class="dl-row"><b style="color:' + staffInfo(w.name).color + '">' + esc(w.name) + '</b><span class="st">' + esc(w.parts || '-') + '</span>' +
-          '<span class="when num">' + (w.planned ? '예정 ' + w.start + '–' + w.end : '스케줄 없음') + '<br>' + (w.tin || w.tout ? '실제 ' + (w.tin || '?') + '–' + (w.tout || '?') : '기록 없음') + (w.late ? ' · <span class="neg">' + w.late + '분 늦음</span>' : '') + '</span>' +
-          '<span class="pill ' + stClass(w.status) + '">' + esc(w.status) + '</span></div>';
+          '<span class="when num">' + (w.planned ? '예정 ' + w.start + '–' + w.end : '스케줄 없음') + '<br>' + (w.tin || w.tout ? '실제 ' + (w.tin || '?') + '–' + (w.tout || '?') : '기록 없음') +  + '</span>' +
+          '<span class="pill ' + stClass(w.status) + '">' + esc(stLabel(w)) + '</span></div>';
       });
       h += '</div>';
     });
@@ -734,7 +735,7 @@
     if (d <= data.today && works.length) {
       h += '<div class="box"><h4>출퇴근 기록 <small>시간을 고치고 저장 (비우면 삭제) · 휴게는 12:00-12:30 형식</small></h4>';
       works.forEach(function (x, k) {
-        h += '<div class="att-row"><div class="who"><b style="color:' + staffInfo(x.name).color + '">' + esc(x.name) + '</b> <span class="pill ' + stClass(x.status) + '">' + esc(x.status) + '</span>' +
+        h += '<div class="att-row"><div class="who"><b style="color:' + staffInfo(x.name).color + '">' + esc(x.name) + '</b> <span class="pill ' + stClass(x.status) + '">' + esc(stLabel(x)) + '</span>' +
           '<small>' + esc(x.store) + ' · ' + (x.planned ? '예정 ' + x.start + '–' + x.end : '스케줄 없음') + '</small></div>' +
           '<input type="time" id="ain-' + k + '" value="' + (x.tin ? hhmm(toMin(x.tin)) : '') + '">' +
           '<input type="time" id="aout-' + k + '" value="' + (x.tout ? hhmm(toMin(x.tout)) : '') + '">' +
