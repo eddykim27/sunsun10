@@ -351,7 +351,15 @@
     return '평일';
   }
   function defaults(store, d) { return S.data.hours.filter(function (h) { return h.store === store && h.dayType === dayType(d); }); }
-  function defaultFor(store, d, part) { var x = defaults(store, d).filter(function (h) { return h.part === part; })[0]; return x || null; }
+  /** 기본 휴무일(토·일 등)에 근무를 넣을 때 쓸 시간: 그날 기본시간 → 없으면 토·공휴일 → 평일 순서로 */
+  function addDefaults(store, d) {
+    var list = defaults(store, d);
+    ['토·공휴일', '평일'].forEach(function (t) {
+      if (!list.length) list = S.data.hours.filter(function (h) { return h.store === store && h.dayType === t; });
+    });
+    return list;
+  }
+  function defaultFor(store, d, part) { var x = addDefaults(store, d).filter(function (h) { return h.part === part; })[0]; return x || null; }
   function partsOf(store) {
     var p = [];
     S.data.hours.forEach(function (h) { if (h.store === store && p.indexOf(h.part) < 0) p.push(h.part); });
@@ -767,14 +775,14 @@
       '<button class="round" onclick="closeEd()" aria-label="닫기">✕</button></div>';
 
     data.stores.forEach(function (st, i) {
-      var defs = defaults(st.name, d);
+      var defs = defaults(st.name, d), addDefs = addDefaults(st.name, d);
       var mine = ED.shifts.map(function (s, idx) { return { s: s, idx: idx }; }).filter(function (x) { return x.s.store === st.name; });
       h += '<div class="box"><h4><span class="' + storeCls(i) + '">' + esc(storeLabel(st)) + '</span><small>' +
-        (defs.length ? defs.map(function (x) { return (x.part === '근무' ? '' : x.part + ' ') + shortT(x.start) + '-' + shortT(x.end); }).join(' · ') : '기본 휴무일') + '</small></h4>';
-      if (!mine.length) h += '<div class="hint" style="margin:0 0 6px">근무자 없음 → 휴무로 표시돼요</div>';
+        (defs.length ? defs.map(function (x) { return (x.part === '근무' ? '' : x.part + ' ') + shortT(x.start) + '-' + shortT(x.end); }).join(' · ') : '기본 휴무일 · 근무 추가 가능') + '</small></h4>';
+      if (!mine.length) h += '<div class="hint" style="margin:0 0 6px">근무자 없음 → 휴무로 표시돼요' + (defs.length ? '' : ' · 근무가 있으면 아래 버튼으로 추가하세요 (시간은 바꿀 수 있어요)') + '</div>';
       mine.forEach(function (x) { h += shiftRow(x.s, x.idx, st.name); });
       h += '<div class="add-row">';
-      (defs.length ? defs.map(function (x) { return x.part; }) : ['근무']).forEach(function (p) {
+      (addDefs.length ? addDefs.map(function (x) { return x.part; }) : ['근무']).forEach(function (p) {
         h += '<button onclick="addShift(\'' + esc(st.name) + '\',\'' + esc(p) + '\')">+ ' + esc(p) + '</button>';
       });
       h += '</div><div class="fld" style="margin-top:10px"><label>' + esc(st.name) + ' 메모 (예: 예배 : 경동, 컴패션(부산) : 하윤) · 줄마다 한 개</label><textarea rows="1" oninput="ED.storeMemo[\'' + esc(st.name) + '\']=this.value">' + esc(ED.storeMemo[st.name]) + '</textarea></div></div>';
