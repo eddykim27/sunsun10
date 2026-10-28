@@ -56,6 +56,7 @@ var DEFAULT_SETTINGS = [
   ['준비시간_알바(분)', '10', '근무시작 몇 분 전까지 출근해야 하는지 (알바)'],
   ['지각유예(분)', '0', '출근 기준시각에서 이만큼은 지각으로 보지 않음'],
   ['조퇴기준(분)', '30', '예정 종료보다 이만큼 이상 일찍 퇴근하면 조퇴 (직원·알바 공통)'],
+  ['인정유예(분)', '20', '예정보다 이만큼 미만으로 늦게 오거나 일찍 가면 예정 시간을 다 인정 (20 이상 차이나면 그만큼 빼요)'],
   ['휴게30분기준(분)', '300', '알바 근무(스케줄)가 이 시간(분) 이상이면 휴게 30분 · 300 = 5시간'],
   ['휴게1시간기준(분)', '420', '알바 근무(스케줄)가 이 시간(분) 이상이면 휴게 1시간 · 420 = 7시간 · 휴게를 더 길게 찍으면 실제만큼 뺌'],
   ['위치확인', '사용', '사용 / 미사용'],
@@ -288,6 +289,7 @@ function getSettings_() {
     prepPart: num_(map['준비시간_알바(분)'], 10),
     grace: num_(map['지각유예(분)'], 0),
     earlyLeave: num_(map['조퇴기준(분)'], 30),
+    creditGrace: num_(map['인정유예(분)'], 20),
     break30At: num_(map['휴게30분기준(분)'], 300),
     break60At: num_(map['휴게1시간기준(분)'], 420),
     locationCheck: map['위치확인'] !== '미사용',
@@ -459,7 +461,11 @@ function evaluate_(g, ctx) {
   }, 0);
   var breakUsed = Math.max(ruleBreak, recBreak);
   var actual = tin != null && tout != null && tout > tin ? Math.max(0, tout - tin - recBreak) : null;
-  var credited = tin != null && tout != null ? Math.max(0, overlap_(tin, tout, intervals) - breakUsed) : null;
+  // 인정: 예정보다 '인정유예' 미만으로 늦게 오거나 일찍 간 건 예정대로 인정 (각각 따로 판단)
+  var cg = ctx.settings.creditGrace || 0;
+  var cIn = tin != null && S != null && tin > S && tin - S < cg ? S : tin;
+  var cOut = tout != null && E != null && tout < E && E - tout < cg ? E : tout;
+  var credited = tin != null && tout != null ? Math.max(0, overlap_(cIn, cOut, intervals) - breakUsed) : null;
   planned = Math.max(0, planned - ruleBreak);
   var late = tin != null && deadline != null ? Math.max(0, tin - deadline) : 0;
 

@@ -226,3 +226,14 @@ console.log('\n✅ 모든 로직 테스트 통과');
   assert.ok(row && row[10] === '6:45', JSON.stringify(row));
   console.log('출근 → 1분 트리거에서 근무내역 반영 ✓');
 }
+
+// ---------- 인정 유예 20분 ----------
+{
+  const env9 = makeEnv({ now: at('2026-10-29T01:00:00') }); seed(env9, data);
+  const mk = (n, a, b) => ({ date: '2026-10-01', store: '2호점', name: n, part: '', start: '12:00', end: '16:00' });
+  const att = [['효은', '12:15', '15:50'], ['예진', '12:25', '16:00'], ['수현', '12:00', '15:40'], ['민경', '12:19', '15:41']]
+    .map(([n, a, b]) => ({ date: '2026-10-01', store: '2호점', name: n, in: a, out: b }));
+  const r = env9.computeRange_('2026-10-01', '2026-10-01', { today: '2026-10-29', sched: att.map(x => mk(x.name)), att });
+  assert.strictEqual(r.map(x => x.name + x.credited).join(','), '효은240,예진215,수현220,민경240');
+  console.log('15분 늦게·10분 일찍 → 240 / 25분 늦게 → 215 / 20분 일찍 → 220 / 19분·19분 → 240 ✓');
+}
