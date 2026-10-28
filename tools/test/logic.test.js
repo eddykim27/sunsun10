@@ -75,7 +75,7 @@ assert.strictEqual(md.memos.filter(m => m.date === '2026-10-21').length, 1);
 // 관리자 출퇴근 수정
 const md2 = env.saveAttendance('1234', '2026-10-21', '2호점', '예진', '06:20', '11:00', '', '2026-10');
 const yj2 = md2.work.find(w => w.date === '2026-10-21' && w.name === '예진');
-assert.strictEqual(yj2.status, '정상'); assert.strictEqual(yj2.actual, 280); assert.strictEqual(yj2.credited, 240);
+assert.strictEqual(yj2.status, '정상'); assert.strictEqual(yj2.actual, 280); assert.strictEqual(yj2.credited, 270); // 4:30 근무 → 휴게 없음
 console.log('관리자 수정 후 예진 →', yj2.status, '실', yj2.actual, '인정', yj2.credited);
 
 // 주 복사: 10/18주 → 11/1주
@@ -165,10 +165,10 @@ console.log('\n✅ 모든 로직 테스트 통과');
 {
   const env4 = makeEnv({ now: at('2026-10-21T08:00:00') });
   const st = env4.getSettings_ ? null : null;
-  const S = { break30At: 270, break60At: 420 };
-  const cases = [[240, 0], [269, 0], [270, 30], [300, 30], [390, 30], [419, 30], [420, 60], [510, 60], [600, 60]];
+  const S = env4.getSettings_ ? { break30At: 300, break60At: 420 } : null;
+  const cases = [[240, 0], [270, 0], [299, 0], [300, 30], [390, 30], [419, 30], [420, 60], [510, 60], [600, 60]];
   cases.forEach(([stay, br]) => assert.strictEqual(env4.breakFor_(stay, S), br, stay + '분'));
-  console.log('4h→0 / 4:30→30 / 6:30→30 / 7h→60 / 10h→60 ✓');
+  console.log('4h→0 / 4:30→0 / 5h→30 / 6:30→30 / 7h→60 / 10h→60 ✓');
   console.log('✅ 휴게 규칙 테스트 통과');
 }
 

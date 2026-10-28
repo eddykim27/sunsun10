@@ -539,9 +539,9 @@
     return weeks;
   }
   function plannedMin(s) { var a = toMin(s.start), b = toMin(s.end); return a != null && b != null && b > a ? b - a : 0; }
-  /** 한 사람의 스케줄 목록 → 휴게(알바 4시간30분 이상 30분, 7시간 이상 1시간) 뺀 근무 분 */
+  /** 한 사람의 스케줄 목록 → 휴게(알바 5시간 이상 30분, 7시간 이상 1시간) 뺀 근무 분 */
   function netMinutes(list, name) {
-    var isPart = staffInfo(name).type !== '직원', brk = S.data.brk || { at30: 270, at60: 420 }, byDay = {};
+    var isPart = staffInfo(name).type !== '직원', brk = S.data.brk || { at30: 300, at60: 420 }, byDay = {};
     var noBrk = {}; S.data.stores.forEach(function (st) { if (st.noBreak) noBrk[st.name] = true; });
     list.forEach(function (s) { var k = s.date + '|' + s.store; byDay[k] = (byDay[k] || 0) + plannedMin(s); });
     return Object.keys(byDay).reduce(function (a, k) {
@@ -570,7 +570,7 @@
       var absent = works.filter(function (w) { return /결근/.test(w.status); }).length;
       return { name: n, type: info.type, color: info.color, wk: wk, month: month, days: Object.keys(days).length, actual: actual, late: late, absent: absent, hasWork: done.length > 0, donePlanned: donePlanned };
     });
-    var h = '<div class="sheet-card"><h3 class="sec">근무시간 합계 <small>스케줄 기준 예정 근무시간 · 알바는 근무 4시간30분 이상이면 휴게 30분, 7시간 이상이면 1시간 제외 (휴게차감 없는 지점 제외) · 주는 일~토</small></h3><div class="tbl-scroll"><table class="t"><thead><tr><th>이름</th>';
+    var h = '<div class="sheet-card"><h3 class="sec">근무시간 합계 <small>스케줄 기준 예정 근무시간 · 알바는 근무 5시간 이상이면 휴게 30분, 7시간 이상이면 1시간 제외 (휴게차감 없는 지점 제외) · 주는 일~토</small></h3><div class="tbl-scroll"><table class="t"><thead><tr><th>이름</th>';
     weeks.forEach(function (w, i) { h += '<th>' + (i + 1) + '주<span class="sub" style="display:block;font-weight:500">' + (+w.from.slice(5, 7)) + '/' + (+w.from.slice(8)) + '~' + (+w.to.slice(5, 7)) + '/' + (+w.to.slice(8)) + '</span></th>'; });
     h += '<th>' + (+d.ym.slice(5)) + '월 합계</th><th>근무일</th><th>실제 근무</th><th>차이*</th><th>지각</th><th>결근</th></tr></thead><tbody>';
     ['직원', '알바'].forEach(function (type) {
