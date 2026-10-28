@@ -511,8 +511,8 @@ function evaluate_(g, ctx) {
     status: status,
     memo: memo.join(' / '),
     breakMin: tin != null && tout != null ? breakUsed : (ruleBreak || ''),
-    // 예상 인정(분): 아직 안 온 근무(예정·근무중)와 기록 누락은 스케줄대로, 결근은 0, 나머지는 실제 인정
-    expected: status === '결근' ? 0 : /예정|미출근|근무중|휴게중|기록전/.test(status) ? planned : (credited != null ? credited : planned),
+    // 예상 인정(분): 출퇴근을 다 찍은 날은 실제 인정, 아직 안 온 날·기록이 없는 날(결근·누락 포함)은 스케줄대로 일한 걸로
+    expected: credited != null && tout != null ? credited : planned,
     breakOpen: breakOpen,
     breaks: g.att ? (g.att.brk || '') : ''
   };
@@ -643,8 +643,8 @@ function weeklyRows_(ym, data) {
       var raw = ok15 ? Math.min(sched, 40 * 60) * wage / 300 : 0;
       var amount = absent ? 0 : Math.ceil(raw / 10 - 1e-9) * 10;
       var verdict = !ok15 ? '미지급(15시간 미만)' : absent ? '미지급(결근)' : pending ? '진행중' : !wage ? '시급 미입력' : '지급';
-      // 예상 주휴: 남은 근무를 스케줄대로 다 한다고 보고 계산 (결근이 생기면 0)
-      var expAmount = ok15 && !absent && wage ? amount : 0;
+      // 예상 주휴: 기록이 없는 날도 스케줄대로 일했다고 보고 계산 (주 15시간 이상이면 지급)
+      var expAmount = ok15 && wage ? Math.ceil(raw / 10 - 1e-9) * 10 : 0;
       rows.push([ym, ws, sat, n, (staffMap[n] || {}).type || '알바', sched, workDays, absent, ok15 ? 'O' : 'X', absent ? 'X' : (pending ? '-' : 'O'),
         absent ? 0 : juMin, wage, amount, verdict, expAmount]);
     });
