@@ -38,16 +38,16 @@ var HEADERS = {
   '체크인로그': ['체크시각', '지점', '이름', '구분', '결과', '위도', '경도', '정확도(m)', '매장까지(m)'],
   '출퇴근기록': ['날짜', '지점', '이름', '출근', '퇴근', '메모', '휴게기록'],
   '근무내역': ['월', '날짜', '요일', '지점', '이름', '구분', '파트', '예정시작', '예정종료', '예정(분)',
-            '출근', '퇴근', '실근무(분)', '인정(분)', '차이(분)', '지각(분)', '상태', '메모', '휴게(분)'],
+            '출근', '퇴근', '실근무(분)', '인정(분)', '차이(분)', '지각(분)', '상태', '메모', '휴게(분)', '예상인정(분)'],
   '주휴수당': ['귀속월', '주시작', '주종료', '이름', '구분', '소정근로(분)', '근무일수', '결근', '15시간이상', '개근',
-            '주휴시간(분)', '시급', '주휴수당(원)', '판정']
+            '주휴시간(분)', '시급', '주휴수당(원)', '판정', '예상주휴(원)']
 };
 
 // 주휴수당에서 숫자로 저장하는 열
-var JU_NUM_COLS = [5, 6, 7, 10, 11, 12];
+var JU_NUM_COLS = [5, 6, 7, 10, 11, 12, 14];
 
 // 근무내역에서 숫자로 저장하는 열 (0부터 시작하는 인덱스)
-var WORK_NUM_COLS = [9, 12, 13, 14, 15, 18];
+var WORK_NUM_COLS = [9, 12, 13, 14, 15, 18, 19];
 
 var DEFAULT_SETTINGS = [
   ['관리자PIN', '1234', '관리자 페이지 비밀번호 (꼭 바꿔주세요)'],
@@ -511,6 +511,8 @@ function evaluate_(g, ctx) {
     status: status,
     memo: memo.join(' / '),
     breakMin: tin != null && tout != null ? breakUsed : (ruleBreak || ''),
+    // 예상 인정(분): 아직 안 온 근무(예정·근무중)와 기록 누락은 스케줄대로, 결근은 0, 나머지는 실제 인정
+    expected: status === '결근' ? 0 : /예정|미출근|근무중|휴게중|기록전/.test(status) ? planned : (credited != null ? credited : planned),
     breakOpen: breakOpen,
     breaks: g.att ? (g.att.brk || '') : ''
   };
@@ -590,7 +592,7 @@ function computeRange_(from, to, data) {
 function workRow_(w) {
   return [w.ym, w.date, w.dow, w.store, w.name, w.type, w.parts, w.start, w.end, w.planned,
     w.tin, w.tout, w.actual == null ? '' : w.actual, w.credited == null ? '' : w.credited,
-    w.diff == null ? '' : w.diff, w.late, w.status, w.memo, w.breakMin === '' ? '' : w.breakMin];
+    w.diff == null ? '' : w.diff, w.late, w.status, w.memo, w.breakMin === '' ? '' : w.breakMin, w.expected];
 }
 
 /** 근무내역 시트에서 해당 월만 다시 계산해 교체 */
@@ -641,8 +643,10 @@ function weeklyRows_(ym, data) {
       var raw = ok15 ? Math.min(sched, 40 * 60) * wage / 300 : 0;
       var amount = absent ? 0 : Math.ceil(raw / 10 - 1e-9) * 10;
       var verdict = !ok15 ? '미지급(15시간 미만)' : absent ? '미지급(결근)' : pending ? '진행중' : !wage ? '시급 미입력' : '지급';
+      // 예상 주휴: 남은 근무를 스케줄대로 다 한다고 보고 계산 (결근이 생기면 0)
+      var expAmount = ok15 && !absent && wage ? amount : 0;
       rows.push([ym, ws, sat, n, (staffMap[n] || {}).type || '알바', sched, workDays, absent, ok15 ? 'O' : 'X', absent ? 'X' : (pending ? '-' : 'O'),
-        absent ? 0 : juMin, wage, amount, verdict]);
+        absent ? 0 : juMin, wage, amount, verdict, expAmount]);
     });
   });
   return rows;
