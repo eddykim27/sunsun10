@@ -56,8 +56,8 @@ var DEFAULT_SETTINGS = [
   ['준비시간_알바(분)', '10', '근무시작 몇 분 전까지 출근해야 하는지 (알바)'],
   ['지각유예(분)', '0', '출근 기준시각에서 이만큼은 지각으로 보지 않음'],
   ['조퇴기준(분)', '30', '예정 종료보다 이만큼 이상 일찍 퇴근하면 조퇴 (직원·알바 공통)'],
-  ['휴게기준(분)', '240', '알바 근무 이만큼(분)마다 휴게 · 240 = 4시간마다 (4시간30분 머물면 4시간 근무)'],
-  ['휴게시간(분)', '30', '한 번에 빼는 휴게시간(분) · 휴게를 더 길게 찍으면 실제만큼 뺌'],
+  ['휴게30분기준(분)', '270', '알바 근무(스케줄)가 이 시간(분) 이상이면 휴게 30분 · 270 = 4시간30분'],
+  ['휴게1시간기준(분)', '420', '알바 근무(스케줄)가 이 시간(분) 이상이면 휴게 1시간 · 420 = 7시간 · 휴게를 더 길게 찍으면 실제만큼 뺌'],
   ['위치확인', '사용', '사용 / 미사용'],
   ['허용반경(m)', '200', '매장에서 이 거리 안에서만 출퇴근 가능'],
   ['로고URL', '', '로고 이미지 주소 (비워두면 기본 로고)']
@@ -288,8 +288,8 @@ function getSettings_() {
     prepPart: num_(map['준비시간_알바(분)'], 10),
     grace: num_(map['지각유예(분)'], 0),
     earlyLeave: num_(map['조퇴기준(분)'], 30),
-    breakAfter: num_(map['휴게기준(분)'], 240),
-    breakMin: num_(map['휴게시간(분)'], 30),
+    break30At: num_(map['휴게30분기준(분)'], 270),
+    break60At: num_(map['휴게1시간기준(분)'], 420),
     locationCheck: map['위치확인'] !== '미사용',
     radius: num_(map['허용반경(m)'], 200),
     logoUrl: map['로고URL'] || ''
@@ -520,10 +520,11 @@ function attObj_(r) {
   return { date: normDate_(r[0]), store: r[1], name: String(r[2]).trim(), 'in': r[3], out: r[4], memo: r[5], brk: r[6] || '' };
 }
 
-/** 머문 시간(분) → 빼야 할 휴게(분). 4:30→30, 8:59→30, 9:00→60 */
+/** 근무(스케줄) 시간(분) → 빼야 할 휴게(분). 4:30 이상 30분, 7:00 이상 1시간 */
 function breakFor_(stay, settings) {
-  var unit = settings.breakAfter + settings.breakMin;
-  return unit > 0 ? Math.floor(stay / unit) * settings.breakMin : 0;
+  if (settings.break60At > 0 && stay >= settings.break60At) return 60;
+  if (settings.break30At > 0 && stay >= settings.break30At) return 30;
+  return 0;
 }
 
 /** "12:00-12:30, 15:00-" → [[720,750],[900,null]] */
@@ -849,7 +850,7 @@ function getMonthData(ym, pin) {
       .filter(function (m) { return m.date >= from && m.date <= to && m.text; }),
     logoUrl: settings.logoUrl,
     prep: { staff: settings.prepStaff, part: settings.prepPart },
-    brk: { after: settings.breakAfter, min: settings.breakMin }
+    brk: { at30: settings.break30At, at60: settings.break60At }
   };
   if (isAdmin) {
     res.work = computeRange_(from, to, { settings: settings, staff: staff, sched: sched }).map(publicWorkAdmin_);

@@ -112,11 +112,11 @@ console.log('\n✅ 모든 로직 테스트 통과');
   const rows = env2.weeklyRows_('2026-10');
   const get = (n, sat) => rows.find(r => r[3] === n && r[2] === sat);
   const sg = get('성광', '2026-10-24');
-  assert.strictEqual(sg[5], 1170); assert.strictEqual(sg[10], 234); assert.strictEqual(sg[12], 42900); assert.strictEqual(sg[13], '지급');
-  console.log('성광 10/18주 7h×3(휴게 30분씩 차감=19.5h) →', sg[12], '원', sg[13]);
+  assert.strictEqual(sg[5], 1080); assert.strictEqual(sg[10], 216); assert.strictEqual(sg[12], 39600); assert.strictEqual(sg[13], '지급');
+  console.log('성광 10/18주 7h×3(휴게 1시간씩 차감=18h) →', sg[12], '원', sg[13]);
   const he = get('효은', '2026-10-24');
-  assert.strictEqual(he[5], 870); assert.strictEqual(he[13], '미지급(15시간 미만)'); assert.strictEqual(he[12], 0);
-  console.log('효은 4+4+7h(휴게 차감 14.5h) →', he[13]);
+  assert.strictEqual(he[5], 840); assert.strictEqual(he[13], '미지급(15시간 미만)'); assert.strictEqual(he[12], 0);
+  console.log('효은 4+4+7h(휴게 차감 14h) →', he[13]);
   assert.strictEqual(get('세진', '2026-10-24')[13], '미지급(15시간 미만)'); assert.strictEqual(get('수현', '2026-10-24')[13], '미지급(결근)');
   // 월 경계: 9/27~10/3 주가 10월에 포함
   const first = rows.filter(r => r[1] === '2026-09-27');
@@ -142,9 +142,9 @@ console.log('\n✅ 모든 로직 테스트 통과');
   r = ci('2026-10-21T10:40:00', '성광', '휴게'); assert.strictEqual(r.breakState, '끝'); assert.strictEqual(r.work.status, '근무중');
   r = ci('2026-10-21T14:00:00', '성광', '퇴근');
   // 실근무: 6:48~14:00 = 432 - 40(휴게) = 392 / 인정: 7:00~14:00 = 420 - max(30,40)=380 / 예정 420-30 = 390
-  assert.strictEqual(r.work.actual, 392); assert.strictEqual(r.work.planned, 390);
+  assert.strictEqual(r.work.actual, 392); assert.strictEqual(r.work.planned, 360);
   const w = env3.computeRange_('2026-10-21', '2026-10-21').find(x => x.name === '성광');
-  assert.strictEqual(w.credited, 380); assert.strictEqual(w.breakMin, 40);
+  assert.strictEqual(w.credited, 360); assert.strictEqual(w.breakMin, 60);
   console.log('성광 7h 근무 · 휴게 40분 찍음 → 예정', w.planned, '/ 인정', w.credited, '/ 휴게', w.breakMin);
   // 휴게 안 찍어도 5시간 이상이면 30분 차감
   ci('2026-10-21T06:50:00', '예진', '출근'); ci('2026-10-21T11:00:00', '예진', '퇴근'); // 4h → 차감 없음
@@ -165,10 +165,10 @@ console.log('\n✅ 모든 로직 테스트 통과');
 {
   const env4 = makeEnv({ now: at('2026-10-21T08:00:00') });
   const st = env4.getSettings_ ? null : null;
-  const S = { breakAfter: 240, breakMin: 30 };
-  const cases = [[240, 0], [270, 30], [300, 30], [420, 30], [510, 30], [539, 30], [540, 60], [600, 60]];
+  const S = { break30At: 270, break60At: 420 };
+  const cases = [[240, 0], [269, 0], [270, 30], [300, 30], [390, 30], [419, 30], [420, 60], [510, 60], [600, 60]];
   cases.forEach(([stay, br]) => assert.strictEqual(env4.breakFor_(stay, S), br, stay + '분'));
-  console.log('4h→0 / 4:30→30 / 5h→30 / 7h→30 / 8:30→30 / 9h→60 / 10h→60 ✓');
+  console.log('4h→0 / 4:30→30 / 6:30→30 / 7h→60 / 10h→60 ✓');
   console.log('✅ 휴게 규칙 테스트 통과');
 }
 
@@ -185,7 +185,7 @@ console.log('\n✅ 모든 로직 테스트 통과');
   const ws = env5.computeRange_('2026-10-23', '2026-10-23');
   const he = ws.find(x => x.name === '효은'), sg = ws.find(x => x.name === '성광');
   assert.strictEqual(he.planned, 420); assert.strictEqual(he.credited, 420);
-  assert.strictEqual(sg.planned, 390); assert.strictEqual(sg.credited, 390);
+  assert.strictEqual(sg.planned, 360); assert.strictEqual(sg.credited, 360);
   // 주휴: 효은 10/18주 1호점 4h(10/19) + 4h(10/21) + 7h(10/23) = 15h → 조건 충족 (결근 없으면)
   const wk = env5.weeklyRows_('2026-10').find(r => r[3] === '효은' && r[2] === '2026-10-24');
   assert.strictEqual(wk[5], 900);
@@ -200,14 +200,14 @@ console.log('\n✅ 모든 로직 테스트 통과');
   env6.__sheets['직원'].getRange(5, 3).setValue('10333');
   const r = env6.weeklyRows_('2026-10').find(x => x[3] === '성광' && x[2] === '2026-10-24');
   // 19.5h → 3.9h × 10,333 = 40,298.7 → 40,300
-  assert.strictEqual(r[5], 1170); assert.strictEqual(r[12], 0); // 기록 없음 → 결근 → 0
+  assert.strictEqual(r[5], 1080); assert.strictEqual(r[12], 0); // 기록 없음 → 결근 → 0
   const env7 = makeEnv({ now: at('2026-10-25T01:00:00') }); seed(env7, data);
   env7.__sheets['직원'].getRange(9, 3).setValue('10333');
   for (const d of ['20', '21', '23']) { env7.__setNow(at(`2026-10-${d}T06:45:00`)); env7.checkIn({ store: '2', name: '성광', kind: '출근' }); env7.__setNow(at(`2026-10-${d}T14:00:00`)); env7.checkIn({ store: '2', name: '성광', kind: '퇴근' }); }
   env7.__setNow(at('2026-10-25T01:00:00'));
   const r2 = env7.weeklyRows_('2026-10').find(x => x[3] === '성광' && x[2] === '2026-10-24');
-  assert.strictEqual(r2[12], 40300);
-  console.log('19.5h × 시급 10,333 → 40,298.7 → 40,300 (10원 올림) ✓');
+  assert.strictEqual(r2[12], 37200);
+  console.log('18h × 시급 10,333 → 37,198.8 → 37,200 (10원 올림) ✓');
 }
 
 // ---------- 1분 트리거 ----------
