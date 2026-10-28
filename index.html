@@ -109,6 +109,10 @@
   .months::-webkit-scrollbar { display: none; }
   .m-btn { flex: none; border: 1px solid var(--line); background: var(--paper); padding: 8px 15px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-2); box-shadow: var(--shadow); }
   .m-btn.on { background: var(--orange); border-color: var(--orange); color: #fff; }
+  .m-nav { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); color: var(--green-2); font-size: 18px; font-weight: 700; display: grid; place-items: center; box-shadow: var(--shadow); }
+  .m-nav:disabled { opacity: .3; box-shadow: none; cursor: default; }
+  .months { align-items: center; }
+  @media (max-width: 560px) { .months .m-btn { padding: 7px 10px; font-size: 13px; } .m-nav { width: 30px; height: 30px; font-size: 16px; } .months { gap: 4px; flex-basis: 100%; } }
   .tabs { display: inline-flex; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
   .tab { border: none; background: none; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
   .tab.on { background: var(--green); color: #fff; }
@@ -281,7 +285,7 @@
       if (d.ym === d.today.slice(0, 7)) lsSet('sunsun-board', JSON.stringify(d));
       var now = new Date();
       $('sync-dot').className = 'sync-dot'; $('sync-text').textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ' 업데이트';
-      $('hero-sub').textContent = (+d.ym.slice(5)) + '월 · 출근 기준: 근무시작 ' + d.prep.staff + '분 전(직원) / ' + d.prep.part + '분 전(알바)';
+      $('hero-sub').textContent = d.ym.slice(0, 4) + '년 ' + (+d.ym.slice(5)) + '월 · 출근 기준: 근무시작 ' + d.prep.staff + '분 전(직원) / ' + d.prep.part + '분 전(알바)';
       if (d.logoUrl) $('logo').innerHTML = '<img class="logo-img" src="' + esc(d.logoUrl) + '" alt="선선커피">';
       render();
       if (manual) toast('최신 기록을 불러왔어요');
@@ -314,12 +318,39 @@
     return names.filter(function (n) { return S.data.work.some(function (w) { return w.name === n; }); });
   }
 
+  /* ---------------- 월 선택 (최대 5개 + 화살표) ---------------- */
+  function addYm(ym, n) { var y = +ym.slice(0, 4), m = +ym.slice(5) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12 + 1; return y + '-' + pad(m); }
+  function monthList() {
+    var d = S.data, first = (d.startDate || d.today).slice(0, 7), last = addYm(d.today.slice(0, 7), 1), out = [];
+    if (d.months && d.months.length && d.months[0] < first) first = d.months[0];
+    for (var m = first; m <= last && out.length < 120; m = addYm(m, 1)) out.push(m);
+    if (out.indexOf(d.ym) < 0) { out.push(d.ym); out.sort(); }
+    return out;
+  }
+  function monthWin() { return window.innerWidth < 560 ? 3 : 5; }
+  function renderMonths() {
+    var d = S.data, list = monthList(), win = monthWin(), max = Math.max(0, list.length - win);
+    if (S.mStart == null || S.mFor !== d.ym) {   // 선택한 달이 보이도록 (가능하면 오른쪽 끝 = 최신 쪽)
+      var i = list.indexOf(d.ym);
+      S.mStart = Math.min(max, Math.max(0, i - win + 2));
+      S.mFor = d.ym;
+    }
+    S.mStart = Math.min(max, Math.max(0, S.mStart));
+    var h = '';
+    if (list.length > win) h += '<button class="m-nav" onclick="moveMonths(-1)"' + (S.mStart <= 0 ? ' disabled' : '') + ' aria-label="이전 달">‹</button>';
+    list.slice(S.mStart, S.mStart + win).forEach(function (m) {
+      h += '<button class="m-btn' + (m === d.ym ? ' on' : '') + '" onclick="load(\'' + m + '\')">' + m.slice(0, 4) + '년 ' + (+m.slice(5)) + '월</button>';
+    });
+    if (list.length > win) h += '<button class="m-nav" onclick="moveMonths(1)"' + (S.mStart >= max ? ' disabled' : '') + ' aria-label="다음 달">›</button>';
+    $('months').innerHTML = h;
+  }
+  function moveMonths(n) { S.mStart += n; renderMonths(); }
+  window.addEventListener('resize', function () { if (S.data) renderMonths(); });
+
   /* ---------------- 렌더 ---------------- */
   function render() {
     var d = S.data;
-    $('months').innerHTML = d.months.map(function (m) {
-      return '<button class="m-btn' + (m === d.ym ? ' on' : '') + '" onclick="load(\'' + m + '\')">' + (+m.slice(5)) + '월' + (m.slice(0, 4) !== d.today.slice(0, 4) ? ' (' + m.slice(2, 4) + ')' : '') + '</button>';
-    }).join('');
+    renderMonths();
     $('tab-summary').className = 'tab' + (S.tab === 'summary' ? ' on' : '');
     $('tab-calendar').className = 'tab' + (S.tab === 'calendar' ? ' on' : '');
     $('summary').hidden = S.tab !== 'summary';
