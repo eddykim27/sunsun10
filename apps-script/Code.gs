@@ -359,8 +359,11 @@ function distM_(lat1, lng1, lat2, lng2) {
  * ======================================================= */
 function getStores_() {
   return readRows_(SH.stores).filter(function (r) { return r[0]; }).map(function (r) {
-    // 휴게차감: '없음'이면 그 지점 근무는 휴게를 빼지 않음 (혼자 근무하는 1호점 등)
-    return { name: r[0], area: r[1], lat: parseFloat(r[2]), lng: parseFloat(r[3]), memo: r[4], noBreak: /없음|미적용|X/i.test(String(r[5] || '')) };
+    // 휴게차감: '적용'(기본 규칙) / '없음'(빼지 않음) / '최대30분'(규칙대로 빼되 30분까지만, QR 휴게 버튼 없음)
+    var bt = String(r[5] || ''), cap = null;
+    if (/(\d+)\s*분/.test(bt)) cap = +bt.match(/(\d+)\s*분/)[1];
+    else if (/없음|미적용|X/i.test(bt)) cap = 0;
+    return { name: r[0], area: r[1], lat: parseFloat(r[2]), lng: parseFloat(r[3]), memo: r[4], breakCap: cap, noBreak: cap === 0, hideBreakBtn: cap != null };
   });
 }
 
@@ -441,9 +444,11 @@ function evaluate_(g, ctx) {
 
   var tin = g.att ? toMin_(g.att['in']) : null;
   var tout = g.att ? toMin_(g.att.out) : null;
-  // 휴게: 알바는 근무 4시간마다 30분 (머문 시간 4:30마다 30분 차감). 실제로 찍은 휴게가 더 길면 그만큼 차감
-  var storeNoBreak = !!(ctx.noBreak && ctx.noBreak[g.store]);
+  // 휴게: 알바는 근무 5시간 이상 30분, 7시간 이상 1시간 (지점별 최대치 적용). 실제로 찍은 휴게가 더 길면 그만큼 차감
+  var cap = ctx.breakCap ? ctx.breakCap[g.store] : null;
+  var storeNoBreak = cap === 0;
   var ruleBreak = st.type !== '직원' && !storeNoBreak ? breakFor_(planned, ctx.settings) : 0;
+  if (cap != null) ruleBreak = Math.min(ruleBreak, cap);
   var brks = storeNoBreak ? [] : parseBreaks_(g.att && g.att.brk);
   var breakOpen = brks.length > 0 && brks[brks.length - 1][1] == null;
   var recBreak = brks.reduce(function (a, b) {
@@ -572,9 +577,9 @@ function computeRange_(from, to, data) {
     });
   });
   var nowStr = Utilities.formatDate(new Date(), TZ, 'HH:mm');
-  var noBreak = {};
-  (data.stores || getStores_()).forEach(function (st) { if (st.noBreak) noBreak[st.name] = true; });
-  var ctx = { staffMap: staffMap, settings: settings, noBreak: noBreak, today: data.today || todayStr_(), nowMin: data.nowMin != null ? data.nowMin : toMin_(nowStr) };
+  var breakCap = {};
+  (data.stores || getStores_()).forEach(function (st) { if (st.breakCap != null) breakCap[st.name] = st.breakCap; });
+  var ctx = { staffMap: staffMap, settings: settings, breakCap: breakCap, today: data.today || todayStr_(), nowMin: data.nowMin != null ? data.nowMin : toMin_(nowStr) };
   var out = order.map(function (k) { return evaluate_(groups[k], ctx); });
   out.sort(function (a, b) {
     return a.date < b.date ? -1 : a.date > b.date ? 1 : a.store < b.store ? -1 : a.store > b.store ? 1 : (toMin_(a.start) || 0) - (toMin_(b.start) || 0);
@@ -666,7 +671,7 @@ function getCheckinInfo(storeParam) {
   var staff = allStaff.filter(function (s) { return s.status !== '퇴사'; });
   var todayRows = computeRange_(today, today, { settings: settings, staff: allStaff, stores: stores }).filter(function (w) { return w.store === store.name; });
   return {
-    store: { name: store.name, area: store.area, memo: store.memo, noBreak: store.noBreak },
+    store: { name: store.name, area: store.area, memo: store.memo, noBreak: store.noBreak, hideBreakBtn: store.hideBreakBtn },
     needLocation: settings.locationCheck && !isNaN(store.lat) && !isNaN(store.lng),
     radius: settings.radius,
     logoUrl: settings.logoUrl,
@@ -840,7 +845,7 @@ function getMonthData(ym, pin) {
   var hol = getHolidays_();
   var res = {
     ym: ym, from: from, to: to, today: todayStr_(), isAdmin: isAdmin,
-    stores: getStores_().map(function (s) { return { name: s.name, area: s.area, memo: s.memo, noBreak: s.noBreak, hasLocation: !isNaN(s.lat) && !isNaN(s.lng) }; }),
+    stores: getStores_().map(function (s) { return { name: s.name, area: s.area, memo: s.memo, noBreak: s.noBreak, breakCap: s.breakCap, hasLocation: !isNaN(s.lat) && !isNaN(s.lng) }; }),
     hours: getHours_(),
     staff: staff.filter(function (s) { return isAdmin || s.status !== '퇴사'; })
       .map(function (s) { return { name: s.name, type: s.type, status: s.status, color: s.color }; }),

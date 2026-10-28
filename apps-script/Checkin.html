@@ -255,7 +255,7 @@
     var w = selected ? todayOf(selected) : null;
     var onBreak = !!(w && w.breakOpen);
     var canBreak = !!(w && w.tin && !w.tout);
-    var showBreak = !(info.store && info.store.noBreak);
+    var showBreak = !(info.store && (info.store.noBreak || info.store.hideBreakBtn));
     return '<div class="actions">' +
       '<button class="act in" ' + (disabled ? 'disabled' : '') + ' onclick="go(\'출근\')">출근<small>지금 왔어요</small></button>' +
       '<button class="act out" ' + (disabled ? 'disabled' : '') + ' onclick="go(\'퇴근\')">퇴근<small>오늘 끝!</small></button>' +

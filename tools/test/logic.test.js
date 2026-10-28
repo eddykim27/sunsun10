@@ -176,20 +176,25 @@ console.log('\n✅ 모든 로직 테스트 통과');
 {
   const env5 = makeEnv({ now: at('2026-10-24T23:00:00') });
   seed(env5, data);
-  env5.__sheets['지점'].getRange(2, 6, 2, 1).setValues([['없음'], ['적용']]);
-  // 10/23 효은 1호점 11-18 (7h) → 차감 없이 420 / 성광 2호점 7-14 (7h) → 390
+  env5.__sheets['지점'].getRange(2, 6, 2, 1).setValues([['최대30분'], ['적용']]);
+  // 10/23 효은 1호점 11-18 (7h) → 최대 30분만 차감 390 / 성광 2호점 7-14 (7h) → 1시간 차감 360
   const ci = (t, st, n, k) => { env5.__setNow(at(t)); env5.checkIn({ store: st, name: n, kind: k }); };
   ci('2026-10-23T10:50:00', '1', '효은', '출근'); ci('2026-10-23T18:00:00', '1', '효은', '퇴근');
   ci('2026-10-23T06:50:00', '2', '성광', '출근'); ci('2026-10-23T14:00:00', '2', '성광', '퇴근');
   env5.__setNow(at('2026-10-24T23:00:00'));
   const ws = env5.computeRange_('2026-10-23', '2026-10-23');
   const he = ws.find(x => x.name === '효은'), sg = ws.find(x => x.name === '성광');
-  assert.strictEqual(he.planned, 420); assert.strictEqual(he.credited, 420);
+  assert.strictEqual(he.planned, 390); assert.strictEqual(he.credited, 390);
   assert.strictEqual(sg.planned, 360); assert.strictEqual(sg.credited, 360);
   // 주휴: 효은 10/18주 1호점 4h(10/19) + 4h(10/21) + 7h(10/23) = 15h → 조건 충족 (결근 없으면)
   const wk = env5.weeklyRows_('2026-10').find(r => r[3] === '효은' && r[2] === '2026-10-24');
-  assert.strictEqual(wk[5], 900);
-  console.log('1호점 효은 7h → 인정 420 (차감 없음) / 2호점 성광 7h → 390 / 효은 주 소정 15h');
+  assert.strictEqual(wk[5], 870);
+  console.log('1호점 효은 7h → 390 (30분 고정) / 2호점 성광 7h → 360 / 효은 주 소정 14.5h');
+  // 1호점: 4:30 → 0, 5h → 30, 9h → 30 / '없음' 지점은 0
+  const cap = env5.computeRange_('2026-10-01', '2026-10-01', { today: '2026-10-29', stores: [{ name: '1호점', breakCap: 30 }, { name: '2호점', breakCap: 0 }],
+    sched: [['1호점', '7:00', '11:30'], ['1호점', '7:00', '12:00'], ['1호점', '7:00', '16:00'], ['2호점', '7:00', '16:00']].map(([st, a, b], i) => ({ date: '2026-10-01', store: st, name: ['효은', '예진', '수현', '민경'][i], part: '', start: a, end: b })), att: [] });
+  assert.strictEqual(cap.map(x => x.planned).join(','), '270,270,510,540');
+  console.log('1호점 4:30→휴게0 / 5h→30 / 9h→30 / 없음 지점 9h→0 ✓');
   console.log('✅ 지점별 휴게 테스트 통과');
 }
 
