@@ -572,6 +572,16 @@ function computeRange_(from, to, data) {
   });
   att.forEach(function (a) {
     var k = key(a.date, a.store, a.name);
+    // 스케줄로 자동 입력한 기록은 항상 '지금' 스케줄을 따라감 (스케줄이 바뀌면 같이 바뀌고, 없어지면 기록도 무시)
+    if (/^자동입력/.test(String(a.memo || ''))) {
+      var g0 = groups[k];
+      if (!g0 || !g0.shifts.length) return;
+      var st0 = staffMap[a.name] || { type: '알바' };
+      var prep0 = st0.type === '직원' ? settings.prepStaff : settings.prepPart;
+      var s0 = Math.min.apply(null, g0.shifts.map(function (x) { return toMin_(x.start); }));
+      var e0 = Math.max.apply(null, g0.shifts.map(function (x) { return toMin_(x.end); }));
+      a = { date: a.date, store: a.store, name: a.name, 'in': fmtMin_(s0 - prep0), out: fmtMin_(e0), memo: a.memo, brk: a.brk };
+    }
     if (!groups[k]) { groups[k] = { date: a.date, store: a.store, name: a.name, shifts: [], att: null }; order.push(k); }
     groups[k].att = a;
   });
@@ -1015,7 +1025,8 @@ function saveAttendance(pin, date, store, name, tin, tout, memo, viewYm, brk) {
     var old = all.filter(same)[0] || [];
     var rows = all.filter(function (r) { return r[0] && !same(r); });
     // 메모·휴게는 새로 넘어오지 않으면 기존 값을 유지
-    var keepMemo = memo ? String(memo) : (old[5] || '');
+    // 자동입력 기록을 관리자가 고치면 더 이상 스케줄을 따라가지 않도록 메모를 바꿈
+    var keepMemo = memo ? String(memo) : (/^자동입력/.test(String(old[5] || '')) ? '관리자 수정' : (old[5] || ''));
     var keepBrk = brk != null ? String(brk).trim() : (old[6] || '');
     if (a != null || b != null) {
       rows.push([date, store, name, fmtMin_(a), fmtMin_(b), keepMemo, keepBrk]);
