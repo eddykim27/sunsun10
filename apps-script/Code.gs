@@ -262,7 +262,7 @@ function writeRows_(name, rows) {
     // 텍스트 열은 텍스트로, 숫자 열은 숫자로
     var numCols = name === SH.work ? WORK_NUM_COLS : JU_NUM_COLS;
     for (var c = 0; c < n; c++) {
-      sh.getRange(2, c + 1, rows.length, 1).setNumberFormat(numCols.indexOf(c) >= 0 ? '0' : '@');
+      sh.getRange(2, c + 1, rows.length, 1).setNumberFormat(numCols.indexOf(c) >= 0 ? '#,##0' : '@');
     }
   } else {
     rng.setNumberFormat('@');
@@ -298,7 +298,9 @@ function getSettings_() {
   };
 }
 
-function num_(v, d) { var n = parseFloat(v); return isNaN(n) ? d : n; }
+function num_(v, d) { var n = parseFloat(String(v == null ? '' : v).replace(/[,\s원]/g, '')); return isNaN(n) ? d : n; }
+/** 시트 표시값('1,234' 등) → 숫자. 숫자가 아니면 '' */
+function cellNum_(v) { if (v === '' || v == null) return ''; var n = Number(String(v).replace(/[,\s원]/g, '')); return isNaN(n) ? '' : n; }
 
 function todayStr_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
 function nowHM_() { return fmtMin_(toMin_(Utilities.formatDate(new Date(), TZ, 'HH:mm'))); }
@@ -617,7 +619,7 @@ function rebuildMonth_(ym) {
   var fresh = computeRange_(days[0], days[days.length - 1]).map(workRow_);
   var keep = readRows_(SH.work).filter(function (r) { return r[0] && r[0] !== ym; });
   var all = keep.concat(fresh).map(function (r) {
-    return r.map(function (v, i) { return WORK_NUM_COLS.indexOf(i) >= 0 && v !== '' ? Number(v) : v; });
+    return r.map(function (v, i) { return WORK_NUM_COLS.indexOf(i) >= 0 ? cellNum_(v) : v; });
   });
   all.sort(function (a, b) { return a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : a[3] < b[3] ? -1 : a[3] > b[3] ? 1 : (toMin_(a[7]) || 0) - (toMin_(b[7]) || 0); });
   writeRows_(SH.work, all);
@@ -672,7 +674,7 @@ function rebuildWeekly_(ym) {
   var fresh = weeklyRows_(ym);
   var keep = readRows_(SH.ju).filter(function (r) { return r[0] && r[0] !== ym; });
   var all = keep.concat(fresh).map(function (r) {
-    return r.map(function (v, i) { return JU_NUM_COLS.indexOf(i) >= 0 && v !== '' ? Number(v) : v; });
+    return r.map(function (v, i) { return JU_NUM_COLS.indexOf(i) >= 0 ? cellNum_(v) : v; });
   });
   all.sort(function (a, b) { return a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : a[3] < b[3] ? -1 : a[3] > b[3] ? 1 : 0; });
   writeRows_(SH.ju, all);
